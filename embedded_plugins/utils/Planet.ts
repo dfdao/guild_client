@@ -1,9 +1,11 @@
 import { LocationId, Planet, WorldCoords } from "@darkforest_eth/types";
 import { isUnconfirmedMoveTx } from "@darkforest_eth/serde"; // Needs "@darkforest_eth/serde": "6.7.0-arena-round-5-1.0",
+
 /**
- * @param planetId
- * @param from
- * @returns
+ * @deprecated probably a more efficient way to do this rather than filtering all unconfirmed moves
+ * @param planetId filter voyages by this planetId
+ * @param from optional from planetId
+ * @returns number of inbound voyages
  */
 export function checkNumInboundVoyages(planetId: LocationId, from = "") {
   if (from == "") {
@@ -28,10 +30,11 @@ export function checkNumInboundVoyages(planetId: LocationId, from = "") {
     );
   }
 }
+
 /**
- *
+ * get total amount of energy in unconfirmed moves
  * @param planet
- * @returns the sum of forces in unconfirmed transactions
+ * @returns the sum of forces in unconfirmed moves
  */
 export function unconfirmedDepartures(planet: Planet): number {
   return (
@@ -42,32 +45,16 @@ export function unconfirmedDepartures(planet: Planet): number {
 }
 
 /**
- *
+ * energy * defense / 100
  * @param planet
- * @returns energy / defense * 100
+ * @returns energy * defense / 100
  */
 export function planetPower(planet: Planet) {
   return (planet.energy * planet.defense) / 100;
 }
 
 /**
- *
- * @param planet
- * @param percentCap
- * @returns
- */
-export function planetPercentEnergy(
-  planet: Planet,
-  percentCap: number = 25
-): number {
-  const departures = unconfirmedDepartures(planet);
-
-  const estimatedEnergy = Math.floor(planet.energy - departures);
-  return (estimatedEnergy * percentCap) / 100;
-}
-
-/**
- * Planets Energy as a Percentage
+ * planet's energy as a percentage adjusted for departures
  * @param planet
  * @returns number between 0 & 100
  */
@@ -78,7 +65,7 @@ export function planetCurrentPercentEnergy(planet: Planet) {
 }
 
 /**
- * Get Distance between Coordinate Pairs
+ * get distance between coordinate pairs
  * @param a: WorldCoords
  * @param b: WorldCoords
  * @returns  number
@@ -89,10 +76,10 @@ export function getDistance(a: WorldCoords, b: WorldCoords) {
 }
 
 /**
- * model energy arriving for a attack adjusted with receivers defense
- * @param srcId: Sending Planet
- * @param syncId: Receiving Planet
- * @param percentageSend: Percentage as a number between 0 & 100
+ * model energy arriving for a attack adjusted with receiver's defense
+ * @param srcId: sending Planet
+ * @param syncId: receiving Planet
+ * @param percentageSend: percentage as a number between 0 & 100
  * @returns
  */
 export function getEnergyArrival(
@@ -122,7 +109,7 @@ export function getEnergyArrival(
  * @param srcId: Sending Planet
  * @param syncId: Receiving Planet
  * @param percentageSend: Percentage as a number between 0 & 100
- * @returns
+ * @returns energy arrive for move
  */
 export function getEnergyArrivalAbs(
   srcId: LocationId,
@@ -138,12 +125,12 @@ export function getEnergyArrivalAbs(
 }
 
 /**
- * (Probably use findWarmWeapons instead)
- * Find Nearby Planets that you own that can attack `planetLocationId`
- * @param planetLocationId: Center point of the search
- * @param maxDistance: Max distance to search
- * @param levelLimit: Minimum Level for planet
- * @param numOfPlanets: Maximum number of planets to return
+ * (probably use findWarmWeapons instead)
+ * find nearby planet's that you own that can attack `planetLocationId`
+ * @param planetLocationId: center point of the search
+ * @param maxDistance: max distance to search
+ * @param levelLimit: minimum Level for planet
+ * @param numOfPlanets: maximum number of planets to return
  * @returns list of planets sorted by ability to do the most damage to `planetLocationId`
  */
 export function findNearBy(
@@ -173,12 +160,12 @@ export function findNearBy(
 }
 
 /**
- * Find Nearby Planets that you own that can attack `planetLocationId`
- * @param planetLocationId: Center point of the search
- * @param levelLimit: Maximum Level for planet
- * @param numOfPlanets: Maximum number of planets to return
- * @param  maxTime: Amount of time the move can take
- * @param excludeList: List of IDs to exclude
+ * find nearby planets that you own that can attack `planetLocationId`
+ * @param planetLocationId: center point of the search
+ * @param levelLimit: maximum Level for planet
+ * @param numOfPlanets: maximum number of planets to return
+ * @param  maxTime: amount of time the move can take
+ * @param excludeList: list of IDs to exclude
  * @returns list of planets sorted by ability to do the most damage to `planetLocationId`
  */
 export function findWeapons(
@@ -229,12 +216,11 @@ export function modelEnergyNeededToTake(srcId: LocationId, syncId: LocationId) {
     return;
   }
   const dist = df.getDist(srcId, syncId);
-  const power_needed_on_arrival = planetPower(sync) * 1.2; //Want a little buffer
+  const powerNeededOnArrival = planetPower(sync) * 1.2; //Want a little buffer
   const scale = (1 / 2) ** (dist / src.range);
-  const power_needed_to_send =
-    power_needed_on_arrival / scale + 0.05 * src.energyCap;
+  const powerNeededToSend = powerNeededOnArrival / scale + 0.05 * src.energyCap;
 
-  return power_needed_to_send;
+  return powerNeededToSend;
 }
 
 /**
@@ -259,10 +245,10 @@ export function modelEnergyGrowth(
 }
 
 /**
- * !Use to model energy in excess of 100%!
- * @param energy Current Energy
- * @param energyGrowth Energy Growth
- * @param energyCap Energy Cap
+ * !Use to model energy growth when energy is in excess of energyCap!
+ * @param energy planet's current energy
+ * @param energyGrowth planet's energy growth
+ * @param energyCap planet's energy cap
  * @param duration number of seconds
  * @returns planet energy at the end of the duration
  */
@@ -276,10 +262,10 @@ export function modelEnergyDecline(
 }
 
 /**
- * !Use to model energy in excess of 100%!
- * @param energy Current Energy
- * @param energyGrowth Energy Growth
- * @param energyCap Energy Cap
+ * !Use to model energy growth when energy is in excess of energyCap!
+ * @param energy planet's current energy
+ * @param energyGrowth planet's energy growth
+ * @param energyCap planet's energy cap
  * @param duration number of seconds
  * @returns planet energy at the end of the duration as a percentage
  */
@@ -297,11 +283,11 @@ export function modelEnergyDeclinePercentage(
 }
 
 /**
- * How much energy is the planet generating right meow.
- * @param energy Planets Current Energy
- * @param energyGrowth Planets energy growth
- * @param energyCap Planets Energy Growth
- * @returns Current Energy Growth Rate
+ * how much energy is the planet generating right meow.
+ * @param energy planet's current energy
+ * @param energyGrowth planet's energy growth
+ * @param energyCap planet's energy cap
+ * @returns current energy growth Rate
  */
 export function modelCurrentEnergyGrowth(
   energy: number,
