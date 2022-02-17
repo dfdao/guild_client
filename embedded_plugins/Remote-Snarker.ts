@@ -91,8 +91,7 @@ class Snarker {
     div.style.width = "400px";
     const firstTextDiv = document.createElement("div");
     firstTextDiv.innerText =
-      "this is the simplified Remote Snarker " +
-      "add the your snarker url below.";
+      "this is the simplified Remote Snarker " + "add your snarker url below.";
     const input = document.createElement("input");
     input.style.width = "100%";
     input.placeholder = "https://snarker.orden.gg";
