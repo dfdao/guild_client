@@ -1,5 +1,16 @@
 import fastq from "fastq";
 
+function isValidUrl(url: string) {
+  if (!url) return false;
+  // if malformed url return
+  try {
+    new URL(url);
+  } catch (_) {
+    return false;
+  }
+  return true;
+}
+
 function isMoveSnarkInput(snarkInput: any) {
   return snarkInput?.x1 && snarkInput?.x2 && snarkInput?.y1 && snarkInput?.y2;
 }
@@ -12,6 +23,7 @@ function replaceOldProverQueue() {
       cb: (err: Error | null, result: any | null) => void
     ) {
       try {
+        //@ts-ignore
         let res = await window.snarkjs.groth16.fullProve(
           task.input,
           task.circuit,
@@ -30,15 +42,7 @@ function replaceOldProverQueue() {
 }
 
 function patchSnarkProverQueue(url: string) {
-  // If no url return
-  if (!url) return;
-  // if malformed url return
-  try {
-    new URL(url);
-  } catch (_) {
-    return;
-  }
-  // TODO: ping server and double check it returns expected home string
+  if (!isValidUrl(url)) return;
 
   //@ts-ignore
   df.snarkHelper.snarkProverQueue.taskQueue = fastq(
@@ -58,6 +62,7 @@ function patchSnarkProverQueue(url: string) {
           });
           res = await proverResponse.json();
         } else {
+          //@ts-ignore
           res = await window.snarkjs.groth16.fullProve(
             task.input,
             task.circuit,
@@ -87,25 +92,40 @@ class Snarker {
    * Here, you can insert custom html into a game modal.
    * You render any sort of UI that makes sense for the plugin!
    */
-  async render(div: HTMLDivElement) {
+  async render(div: HTMLElement) {
     div.style.width = "400px";
     const firstTextDiv = document.createElement("div");
-    firstTextDiv.innerText =
-      "this is the simplified Remote Snarker " + "add your snarker url below.";
+    firstTextDiv.innerText = "Input the url to your remote snarker below";
     const input = document.createElement("input");
+    input.style.color = "black";
     input.style.width = "100%";
-    input.placeholder = "https://snarker.orden.gg";
+    input.placeholder = "https://snark.1fa90.xyz";
+    input.value = "https://snark.1fa90.xyz";
     const button = document.createElement("button");
     button.innerHTML = "Start Remote Snarker";
+    const status = document.createElement("p");
     button.onclick = () => {
-      patchSnarkProverQueue(input.value);
+      if (isValidUrl(input.value)) {
+        patchSnarkProverQueue(input.value);
+        status.innerHTML = "running";
+        status.style.color = "green";
+      } else {
+        status.innerHTML = "Not valid URL";
+        status.style.color = "red";
+      }
     };
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.flexFlow = "row";
+    row.style.justifyContent = "space-between";
+    row.appendChild(button);
+    row.appendChild(status);
     div.appendChild(firstTextDiv);
     div.appendChild(document.createElement("br"));
     div.appendChild(input);
     div.appendChild(document.createElement("br"));
     div.appendChild(document.createElement("br"));
-    div.appendChild(button);
+    div.appendChild(row);
   }
   /**
    * When this is unloaded, the game calls the destroy method.
