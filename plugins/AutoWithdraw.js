@@ -5,16 +5,8 @@
 import { PlanetType } from "https://cdn.skypack.dev/@darkforest_eth/types";
 var pg = df.getProcgenUtils();
 
-/**
- * Plugins are just TypeScript (or modern JavaScript, if you prefer), so you can use imports, too!
- */
-// @ts-ignore
-import confetti from "https://cdn.skypack.dev/canvas-confetti";
-/**
- * A plugin is a Class with render and destroy methods.
- * Other than that, you are free to do whatever, so be careful!
- */
-class Readme {
+
+class AutoWithdraw {
   /**
    * A constructor can be used to keep track of information.
    */
@@ -478,15 +470,10 @@ class Readme {
    * So you can clean up everything nicely!
    */
   destroy() {
-    const ctx = this.canvas.getContext("2d");
-    if (ctx) {
-      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.clearSendTimer()
+    this.clearWithdrawTimer()
     }
   }
 }
-/**
- * For the game to know about your plugin, you must export it!
- *
- * Use `export default` to expose your plugin Class.
- */
-export default Readme;
+
+export default Autowithdraw;
