@@ -72,6 +72,12 @@ class RemoteWorker implements Worker {
 
     exploredChunk.perlin = df.spaceTypePerlin(chunkCenter, false);
     for (const planetLoc of exploredChunk.planetLocations) {
+      // blue-space encodes coords as string. DF does no like that.
+      // convert string to int.
+      const { x: xs, y: ys } = planetLoc.coords;
+      const x = +xs;
+      const y = +ys;
+      planetLoc.coords = { x, y };
       planetLoc.hash = locationIdFromDecStr(planetLoc.hash);
       planetLoc.perlin = df.spaceTypePerlin({ x: planetLoc.coords.x, y: planetLoc.coords.y }, true);
       planetLoc.biomebase = df.biomebasePerlin(
