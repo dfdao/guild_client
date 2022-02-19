@@ -96,15 +96,9 @@ module.exports = {
     // The string values are fallbacks if the env variable is not set
     new EnvironmentPlugin({
       NODE_ENV: 'development',
-<<<<<<< HEAD
       DEFAULT_RPC: 'http://161.35.57.217:8545',
       // This must be null to indicate to webpack that this environment variable is optional
       DF_WEBSERVER_URL: 'https://api.zkga.me',
-=======
-      DEFAULT_RPC: 'https://rpc-df.xdaichain.com/',
-      // This must be null to indicate to webpack that this environment variable is optional
-      DF_WEBSERVER_URL: null,
->>>>>>> df/master
     }),
     new HtmlWebpackPlugin({
       template: './index.html',
