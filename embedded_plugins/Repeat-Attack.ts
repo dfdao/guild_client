@@ -1,8 +1,35 @@
-import { Planet, LocationId } from "@darkforest_eth/types";
+//@ts-ignore
 import {
-  unconfirmedDepartures,
-  planetCurrentPercentEnergy,
-} from "./utils/Planet";
+  Planet,
+  LocationId,
+  //@ts-ignore
+} from "https://cdn.skypack.dev/@darkforest_eth/types";
+//@ts-ignore
+import { isUnconfirmedMoveTx } from "https://cdn.skypack.dev/@darkforest_eth/serde";
+//@ts-ignore
+import {
+  html,
+  render,
+  useEffect,
+  useState,
+  useLayoutEffect,
+  //@ts-ignore
+} from "https://unpkg.com/htm/preact/standalone.module.js";
+
+function unconfirmedDepartures(planet: Planet): number {
+  return (
+    planet.transactions
+      ?.getTransactions(isUnconfirmedMoveTx)
+      //@ts-ignore
+      .reduce((acc, tx) => acc + tx.intent.forces, 0) || 0
+  );
+}
+
+function planetCurrentPercentEnergy(planet: Planet) {
+  const departures = unconfirmedDepartures(planet);
+  const estimatedEnergy = Math.floor(planet.energy - departures);
+  return Math.floor((estimatedEnergy / planet.energyCap) * 100);
+}
 interface Attack {
   srcId: LocationId;
   targetId: LocationId;
@@ -70,9 +97,6 @@ const ExecuteAttack = (srcId: LocationId, targetId: LocationId) => {
     df.move(srcId, targetId, FORCES, 0);
   }
 };
-
-import { html } from "htm/preact";
-import { useState, useLayoutEffect, useEffect } from "preact/hooks";
 
 let Spacing = {
   marginLeft: "12px",
@@ -184,7 +208,7 @@ function AttackList({ repeater }: { repeater: Repeater }) {
     overflowX: "hidden",
     overflowY: "scroll",
   };
-
+  //@ts-ignore
   let actionsChildren = attacks.map((action, index) => {
     return html`
       <${Attack}
@@ -220,6 +244,43 @@ function AttackList({ repeater }: { repeater: Repeater }) {
   `;
 }
 
-export function App({ repeater }: { repeater: Repeater }) {
+function App({ repeater }: { repeater: Repeater }) {
   return html`<${AttackList} repeater=${repeater} />`;
 }
+
+class Plugin {
+  repeater: Repeater;
+  container: HTMLDivElement | undefined;
+  root: void;
+  stop() {
+    //@ts-ignore
+    window.__CORELOOP__.forEach((id) => window.clearInterval(id));
+  }
+  constructor() {
+    this.repeater = new Repeater();
+    this.root = undefined;
+  }
+
+  /**
+   * Called when plugin is launched with the "run" button.
+   */
+  async render(container: HTMLDivElement) {
+    this.container = container;
+    container.style.width = "380px";
+    this.root = render(html`<${App} repeater=${this.repeater} />`, container);
+  }
+
+  /**
+   * Called when plugin modal is closed.
+   */
+  destroy() {
+    //@ts-ignore
+    window.__CORELOOP__.forEach((id) => window.clearInterval(id));
+    if (this.container) render(html`<div></div>`, this.container);
+  }
+}
+
+/**
+ * And don't forget to export it!
+ */
+export default Plugin;
