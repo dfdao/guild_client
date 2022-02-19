@@ -1,4 +1,5 @@
-import fastq from "fastq";
+//@ts-ignore
+import fastq from "https://cdn.skypack.dev/fastq";
 
 function isValidUrl(url: string) {
   if (!url) return false;
