@@ -55,6 +55,7 @@ import { ContractConstants } from '../../_types/darkforest/api/ContractsAPITypes
 import { HashConfig } from '../../_types/global/GlobalTypes';
 import { MiningPattern } from '../Miner/MiningPatterns';
 import { coordsEqual } from '../Utils/Coordinates';
+import { isFullRank } from '../Utils/Utils';
 import GameManager, { GameManagerEvent } from './GameManager';
 import { GameObjects } from './GameObjects';
 import { PluginManager } from './PluginManager';
@@ -1027,7 +1028,19 @@ class GameUIManager extends EventEmitter {
     if (!planetId) return defaultSending;
 
     const planet = this.getPlanetWithId(planetId)
-    defaultSending = (planet && planet.planetType == PlanetType.SILVER_MINE) ? 75 : 0;
+    if(planet) {
+      if(
+        planet.planetType == PlanetType.SILVER_MINE
+        && (planet.silver/planet.silverCap*100 > 75)
+        )
+        defaultSending = 75;
+      else if(isFullRank(planet)) {
+        defaultSending = 100;
+      }
+      else {
+        defaultSending = 0;
+      }
+    }
 
     if (this.isAbandoning()) return 100;
     if (this.isSendingShip(planetId)) return 0;
