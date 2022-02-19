@@ -12,6 +12,8 @@
     "@darkforest_eth/hashing": "6.7.0",
     "@darkforest_eth/hexgen": "6.7.0",
     "@darkforest_eth/network": "6.7.0",
+    "@darkforest_eth/procedural": "^6.7.0",
+    "@darkforest_eth/renderer": "^6.7.0",
     "@darkforest_eth/serde": "6.7.0",
     "@darkforest_eth/settings": "6.7.0",
     "@darkforest_eth/snarks": "6.7.0",
