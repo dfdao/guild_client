@@ -1009,7 +1009,7 @@ class GameUIManager extends EventEmitter {
    * Percent from 0 to 100.
    */
   public getForcesSending(planetId?: LocationId): number {
-    const defaultSending = 50;
+    const defaultSending = 75;
     if (!planetId) return defaultSending;
 
     if (this.isAbandoning()) return 100;
@@ -1023,8 +1023,11 @@ class GameUIManager extends EventEmitter {
    * Percent from 0 to 100.
    */
   public getSilverSending(planetId?: LocationId): number {
-    const defaultSending = 0;
+    let defaultSending = 0;
     if (!planetId) return defaultSending;
+
+    const planet = this.getPlanetWithId(planetId)
+    defaultSending = (planet && planet.planetType == PlanetType.SILVER_MINE) ? 75 : 0;
 
     if (this.isAbandoning()) return 100;
     if (this.isSendingShip(planetId)) return 0;
