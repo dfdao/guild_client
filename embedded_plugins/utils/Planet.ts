@@ -1,5 +1,11 @@
-import { LocationId, Planet, WorldCoords } from "@darkforest_eth/types";
-import { isUnconfirmedMoveTx } from "@darkforest_eth/serde"; // Needs "@darkforest_eth/serde": "6.7.0-arena-round-5-1.0",
+import {
+  LocationId,
+  Planet,
+  Transaction,
+  UnconfirmedMove,
+  WorldCoords,
+} from "@darkforest_eth/types";
+import { isUnconfirmedMoveTx } from "@darkforest_eth/serde";
 
 /**
  * @deprecated probably a more efficient way to do this rather than filtering all unconfirmed moves
@@ -17,7 +23,10 @@ export function checkNumInboundVoyages(planetId: LocationId, from = "") {
             v.toPlanet == planetId &&
             v.arrivalTime > new Date().getTime() / 1000
         ).length +
-      df.getUnconfirmedMoves().filter((m) => m.to == planetId).length
+      df
+        .getUnconfirmedMoves()
+        .filter((m: Transaction<UnconfirmedMove>) => m.intent.to == planetId)
+        .length
     );
   } else {
     return (
@@ -25,8 +34,12 @@ export function checkNumInboundVoyages(planetId: LocationId, from = "") {
         .getAllVoyages()
         .filter((v) => v.toPlanet == planetId)
         .filter((v) => v.fromPlanet == from).length +
-      df.getUnconfirmedMoves().filter((m) => m.to == planetId && m.from == from)
-        .length
+      df
+        .getUnconfirmedMoves()
+        .filter(
+          (m: Transaction<UnconfirmedMove>) =>
+            m.intent.to == planetId && m.intent.from == from
+        ).length
     );
   }
 }
