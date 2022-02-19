@@ -29,7 +29,7 @@
     "emoji-picker-react": "^3.4.8",
     "ethers": "^5.0.7",
     "events": "^3.0.0",
-    "fastq": "^1.10.0",
+    "fastq": "^1.13.0",
     "gl-matrix": "^3.3.0",
     "htm": "^3.0.4",
     "idb": "^5.0.1",
