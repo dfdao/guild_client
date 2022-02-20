@@ -503,7 +503,7 @@ class GameUIManager extends EventEmitter {
         this.terminal.current?.println(``);
       } else if (
         mouseDownPlanet &&
-        (mouseDownPlanet.owner === this.gameManager.getAccount() ||
+        ( this.gameManager.ownsAccount(mouseDownPlanet.owner) ||
           this.isSendingShip(mouseDownPlanet.locationId))
       ) {
         // move initiated if enough forces

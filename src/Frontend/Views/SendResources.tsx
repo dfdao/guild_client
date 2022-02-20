@@ -211,7 +211,7 @@ export function SendResources({
 }) {
   const uiManager = useUIManager();
   const account = useAccount(uiManager);
-  const owned = p.value?.owner === account;
+  const owned = p.value?.owner ? uiManager.getGameManager().ownsAccount(p.value?.owner) : false;
   const locationId = p?.value?.locationId;
 
   const isSendingShip = uiManager.isSendingShip(locationId);
