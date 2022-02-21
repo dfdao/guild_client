@@ -6,30 +6,30 @@ import {
     ArtifactId,
     ArtifactTypeNames
     //@ts-ignore
-} from "@darkforest_eth/types";
+} from "http://cdn.skypack.dev/@darkforest_eth/types";
 import {
     isSpaceShip,
     isLocatable
     //@ts-ignore
-} from "@darkforest_eth/gamelogic"
+} from "http://cdn.skypack.dev/@darkforest_eth/gamelogic"
 import { 
     address,
     artifactIdToDecStr,
     locationIdFromHexStr
     //@ts-ignore
-} from "@darkforest_eth/serde";
+} from "http://cdn.skypack.dev/@darkforest_eth/serde";
 import {
     EthAddress,
     //@ts-ignore
-} from "@darkforest_eth/types";
+} from "http://cdn.skypack.dev/@darkforest_eth/types";
 import { 
     EthConnection
     // @ts-ignore
- } from "darkforest_eth/network";
+ } from "http://cdn.skypack.dev/darkforest_eth/network";
 import { 
     DarkForest
     // @ts-ignore
- } from "@darkforest_eth/contracts/typechain";
+ } from "http://cdn.skypack.dev/@darkforest_eth/contracts/typechain";
 
 import { Button, Text, LineBreak, Stepper, Select } from "./views/basics";
 import { 
@@ -39,10 +39,13 @@ import {
     Wallet
     // @ts-ignore
  } from 'ethers';
-import { CONTRACT_PRECISION } from "@darkforest_eth/constants";
-import { MoveArgIdxs, MoveArgs, ZKArgIdx } from "../src/_types/darkforest/api/ContractsAPITypes";
-import { MoveSnarkContractCallArgs } from "@darkforest_eth/snarks";
-import { getPlanetName } from "@darkforest_eth/procedural";
+// @ts-ignore
+import { CONTRACT_PRECISION } from "http://cdn.skypack.dev/@darkforest_eth/constants";
+import { MoveArgIdxs, MoveArgs, ZKArgIdx } from "./utils/ContractsAPITypes";
+    // @ts-ignore
+import { MoveSnarkContractCallArgs } from "http://cdn.skypack.dev/@darkforest_eth/snarks";
+    // @ts-ignore
+import { getPlanetName } from "http://cdn.skypack.dev/@darkforest_eth/procedural";
 import { ShipOptions } from "./utils/Artifacts";
 
 export interface Account {
