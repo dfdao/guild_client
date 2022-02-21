@@ -26,8 +26,9 @@ import {
 
 const getPlanetString = (locationId: LocationId): string => {
   const planet = df.getPlanetWithId(locationId);
+  // Type-${PlanetTypeNames[planet.planetType].slice(0,3)
   if(planet) {  
-    return `Lvl-${planet.planetLevel} Type-${PlanetTypeNames[planet.planetType].slice(0,3)}`
+    return `${planet.planetLevel} - ${getPlanetName(planet)}`
   }
   return `xx invalid id`;
 }
@@ -37,6 +38,31 @@ const getPlanetRank = (planet: Planet | undefined): number => {
   //@ts-ignore
   return planet.upgradeState.reduce((a, b) => a + b);
 };
+
+const calcSilver = (srcPlanet: Planet): number => {
+  var silver = 0;
+  // Send silver w repeat Attack
+  if(srcPlanet.planetType === PlanetType.SILVER_MINE) {
+    // Send asteroid silver if > 75%
+    if(srcPlanet.silver/srcPlanet.silverCap * 100 > 75) {
+      silver = Math.floor(srcPlanet.silver * 75/100);
+    }
+    else {
+      silver = 0;
+    }
+  }
+  // send all silver from foundries
+  else if(srcPlanet.planetType === PlanetType.RUINS) {
+    silver = srcPlanet.silver
+  }
+  else if(srcPlanet.planetType === PlanetType.PLANET) {
+    if(isFullRank(srcPlanet))silver = srcPlanet.silver;
+  }
+  else {
+    silver = 0;
+  }
+  return silver;
+}
 
 const getPlanetMaxRank = (planet: Planet | undefined): number => {
   if (!planet) return 0;
@@ -152,19 +178,8 @@ const ExecuteAttack = (srcId: LocationId, targetId: LocationId) => {
       (PERCENTAGE_TRIGGER - PERCENTAGE_SEND);
 
     const FORCES = Math.floor((srcPlanet.energyCap * overflow_send) / 100);
-    var silver = 0;
-    // Send silver w repeat Attack
-    if(
-      srcPlanet.planetType == PlanetType.SILVER_MINE
-      && (srcPlanet.silver/srcPlanet.silverCap*100 > 75)
-      )
-      silver = Math.floor(srcPlanet.silver * 75/100);
-    else if(isFullRank(srcPlanet)) {
-      silver = srcPlanet.silver;
-    }
-    else {
-      silver = 0;
-    }
+    const silver = calcSilver(srcPlanet);
+    console.log(`sending silver`, silver);
   
     df.move(srcId, targetId, FORCES, silver);
   }
@@ -276,7 +291,7 @@ function AttackList({ repeater }: { repeater: Repeater }) {
   }, [attacks.length]);
 
   let actionList = {
-    maxHeight: "70px",
+    maxHeight: "150px",
     overflowX: "hidden",
     overflowY: "scroll",
   };
