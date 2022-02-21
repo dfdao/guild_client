@@ -2,8 +2,16 @@
 import {
   Planet,
   LocationId,
+  PlanetType,
+  SpaceType,
+  EthAddress,
+  PlanetTypeNames
   //@ts-ignore
 } from "https://cdn.skypack.dev/@darkforest_eth/types";
+import {
+  getPlanetName
+  //@ts-ignore
+} from "https://cdn.skypack.dev/@darkforest_eth/procedural";
 //@ts-ignore
 import { isUnconfirmedMoveTx } from "https://cdn.skypack.dev/@darkforest_eth/serde";
 //@ts-ignore
@@ -15,6 +23,36 @@ import {
   useLayoutEffect,
   //@ts-ignore
 } from "https://unpkg.com/htm/preact/standalone.module.js";
+
+const getPlanetString = (locationId: LocationId): string => {
+  const planet = df.getPlanetWithId(locationId);
+  if(planet) {  
+    return `Lvl-${planet.planetLevel} Type-${PlanetTypeNames[planet.planetType].slice(0,3)}`
+  }
+  return `xx invalid id`;
+}
+
+const getPlanetRank = (planet: Planet | undefined): number => {
+  if (!planet) return 0;
+  //@ts-ignore
+  return planet.upgradeState.reduce((a, b) => a + b);
+};
+
+const getPlanetMaxRank = (planet: Planet | undefined): number => {
+  if (!planet) return 0;
+
+  if (planet.spaceType === SpaceType.NEBULA) return 3;
+  else if (planet.spaceType === SpaceType.SPACE) return 4;
+  else return 5;
+};
+
+const isFullRank = (planet: Planet | undefined): boolean => {
+  if (!planet) return true;
+  const maxRank = getPlanetMaxRank(planet);
+  const rank = getPlanetRank(planet);
+
+  return rank >= maxRank;
+};
 
 function unconfirmedDepartures(planet: Planet): number {
   return (
@@ -42,6 +80,7 @@ let PERCENTAGE_SEND = 45;
 class Repeater {
   public attacks: Attack[];
   intervalId: number;
+  public account: EthAddress | undefined;
 
   constructor() {
     //@ts-ignore
@@ -56,18 +95,37 @@ class Repeater {
       //@ts-ignore
       window.__CORELOOP__.forEach((id) => window.clearInterval(id));
     }
+
     this.attacks = [];
+
+    this.account = df.getAccount()
+
+    if(localStorage.getItem(`repeatAttacks-${this.account}`)) {
+      // @ts-ignore
+      this.attacks = JSON.parse(localStorage.getItem(`repeatAttacks-${this.account}`))
+    }
+
+
     this.intervalId = window.setInterval(this.coreLoop.bind(this), 15000);
     //@ts-ignore
     window.__CORELOOP__.push(this.intervalId);
   }
 
+  saveAttacks() {
+    console.log('saving attacks', this.attacks);
+    localStorage.setItem(`repeatAttacks-${this.account}`, JSON.stringify(this.attacks));
+  }
+
   addAttack(srcId: LocationId, targetId: LocationId) {
     this.attacks.push({ srcId, targetId } as Attack);
+    this.saveAttacks();
   }
   removeAttack(position: number) {
     this.attacks.splice(position, 1);
+    this.saveAttacks()
   }
+
+
 
   coreLoop() {
     this?.attacks?.forEach((a) => {
@@ -94,7 +152,21 @@ const ExecuteAttack = (srcId: LocationId, targetId: LocationId) => {
       (PERCENTAGE_TRIGGER - PERCENTAGE_SEND);
 
     const FORCES = Math.floor((srcPlanet.energyCap * overflow_send) / 100);
-    df.move(srcId, targetId, FORCES, 0);
+    var silver = 0;
+    // Send silver w repeat Attack
+    if(
+      srcPlanet.planetType == PlanetType.SILVER_MINE
+      && (srcPlanet.silver/srcPlanet.silverCap*100 > 75)
+      )
+      silver = Math.floor(srcPlanet.silver * 75/100);
+    else if(isFullRank(srcPlanet)) {
+      silver = srcPlanet.silver;
+    }
+    else {
+      silver = 0;
+    }
+  
+    df.move(srcId, targetId, FORCES, silver);
   }
 };
 
@@ -134,13 +206,13 @@ function Attack({ attack, onDelete }: { attack: Attack; onDelete: () => {} }) {
         <span
           style=${{ ...Spacing, ...Clickable }}
           onClick=${() => centerPlanet(attack.srcId)}
-          >${planetShort(attack.srcId)}</span
+          >${getPlanetString(attack.srcId)}</span
         >
         =>
         <span
           style=${{ ...Spacing, ...Clickable }}
           onClick=${() => centerPlanet(attack.targetId)}
-          >${planetShort(attack.targetId)}</span
+          >${getPlanetString(attack.targetId)}</span
         ></span
       >
       <button onClick=${onDelete}>X</button>
@@ -174,13 +246,13 @@ function AddAttack({
         Set Source
       </button>
       <span style=${{ ...Spacing, marginRight: "auto" }}
-        >${source ? planetShort(source.locationId) : "?????"}</span
+        >${source ? getPlanetString(source.locationId) : "?????"}</span
       >
       <button style=${VerticalSpacing} onClick=${() => setTarget(planet)}>
         Set Target
       </button>
       <span style=${{ ...Spacing, marginRight: "auto" }}
-        >${target ? planetShort(target.locationId) : "?????"}</span
+        >${target ? getPlanetString(target.locationId) : "?????"}</span
       >
       <button
         style=${VerticalSpacing}
@@ -223,7 +295,7 @@ function AttackList({ repeater }: { repeater: Repeater }) {
   return html`
     <h1>Set-up a Recurring Attack</h1>
     <i style=${{ ...VerticalSpacing, display: "block" }}
-      >Auto-attack when source planet >75% energy
+      >Auto-attack when source planet >75% energy. Will send silver if silver > 75%
     </i>
     <${AddAttack}
       onCreate=${(source: LocationId, target: LocationId) =>
@@ -256,9 +328,16 @@ class Plugin {
     //@ts-ignore
     window.__CORELOOP__.forEach((id) => window.clearInterval(id));
   }
+
+// localStorage.setItem("names", JSON.stringify(names));
+
+// //...
+// var storedNames = JSON.parse(localStorage.getItem("names"));  
+
   constructor() {
     this.repeater = new Repeater();
     this.root = undefined;
+    
   }
 
   /**
@@ -266,7 +345,7 @@ class Plugin {
    */
   async render(container: HTMLDivElement) {
     this.container = container;
-    container.style.width = "380px";
+    container.style.width = "500px";
     this.root = render(html`<${App} repeater=${this.repeater} />`, container);
   }
 
