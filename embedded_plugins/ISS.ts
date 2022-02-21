@@ -99,7 +99,7 @@ const move = async (
             args[ZKArgIdx.DATA][MoveArgIdxs.ARTIFACT_SENT] = artifactIdToDecStr(artifact);
         }
     
-    const tx = await contract.move(args[0], args[1], args[2], args[3], {gasLimit: 5000000});
+    const tx = await contract.move(args[0], args[1], args[2], args[3], {gasLimit: 5000000, nonce: await contract.signer.getTransactionCount()});
     return tx;
 };
 
