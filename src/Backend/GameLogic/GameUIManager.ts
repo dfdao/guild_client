@@ -1026,7 +1026,6 @@ class GameUIManager extends EventEmitter {
   public getSilverSending(planetId?: LocationId): number {
     let defaultSending = 0;
     if (!planetId) return defaultSending;
-
     const planet = this.getPlanetWithId(planetId)
     if(planet) {
       if(
