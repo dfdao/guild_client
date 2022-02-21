@@ -42,3 +42,27 @@ export const Text = (innerHTML: string) => {
   return text;
 };
 export const LineBreak = () => document.createElement("br");
+
+export const Select = (
+  options: { value: string, label: string }[],
+  onChange: ((this: GlobalEventHandlers, ev: Event) => any) | null
+) => { 
+  var div = document.createElement("div");
+  var x = document.createElement("SELECT");
+  x.id = 'myselect';
+  div.appendChild(x);
+
+  options.forEach(o => {
+    var z = document.createElement("option");
+    z.value = o.value;
+    var t = document.createTextNode(o.label);
+    z.appendChild(t);
+    x.appendChild(z);
+  })
+  
+  x.onchange = (evt: Event) => {
+    // @ts-ignore
+    onChange(evt.target.value);
+  };
+  return div;
+};
