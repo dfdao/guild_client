@@ -6322,7 +6322,7 @@ var require_bech32 = __commonJS({
   }
 });
 
-// embedded_plugins/ISS.ts
+// embedded_plugins/unused/ISS.ts
 import {
   ArtifactType,
   ArtifactTypeNames
@@ -21118,7 +21118,7 @@ try {
 } catch (error) {
 }
 
-// embedded_plugins/ISS.ts
+// embedded_plugins/unused/ISS.ts
 import { CONTRACT_PRECISION } from "http://cdn.skypack.dev/@darkforest_eth/constants";
 
 // embedded_plugins/utils/ContractsAPITypes.ts
@@ -21206,7 +21206,7 @@ var PlanetEventType;
   PlanetEventType2[PlanetEventType2["ARRIVAL"] = 0] = "ARRIVAL";
 })(PlanetEventType || (PlanetEventType = {}));
 
-// embedded_plugins/ISS.ts
+// embedded_plugins/unused/ISS.ts
 import { getPlanetName } from "http://cdn.skypack.dev/@darkforest_eth/procedural";
 
 // embedded_plugins/utils/Artifacts.ts
@@ -21233,7 +21233,7 @@ var ShipOptions = [
   }
 ];
 
-// embedded_plugins/ISS.ts
+// embedded_plugins/unused/ISS.ts
 var ADDRESS_LOCAL_STORAGE_KEY = "KNOWN_ADDRESSES";
 function load() {
   const knownAddresses = [];
@@ -21282,7 +21282,7 @@ var ISS = class {
       this.accounts.forEach((a) => {
         this.accountOptions.push({
           value: a.address,
-          label: a.address.slice(0, 6)
+          label: a.address.slice(0, 8)
         });
       });
       for (const account of this.accounts) {
