@@ -1,5 +1,7 @@
 
 let divStatus;
+let divPlanetListBlocks;
+let divPlanetListEnergy;
 let divLog;
 let interv = null;
 let loopIsBusy = false;
@@ -61,7 +63,7 @@ function htmlBut(str, onClickStr) {
 }
 
 function planetBut(p) {
-	return htmlBut(p.locationId.substr(0, 8), ()=>{ ui.centerPlanet(p.locationId); });
+	return htmlBut(p.locationId.substr(0, 8), "ui.centerLocationId('"+p.locationId+"');");
 }
 
 let capturingPlanets = {};
@@ -118,6 +120,23 @@ async function loop() {
 	divStatus.innerHTML += "&nbsp;&nbsp;&nbsp;  waitingForEnergy: "+planetsWaitingForEnergy.length+"<br>";
 	divStatus.innerHTML += "invaded: "+planetsInvaded.length;
 	divStatus.innerHTML += "&nbsp;&nbsp;&nbsp;  captured: "+planetsCaptured.length;
+	
+	divPlanetListBlocks.innerHTML = "";
+	if (planetsWaitingForBlocks.length > 0) {
+		divPlanetListBlocks.innerHTML = "waiting for blocks:<br>";
+		for (let p of planetsWaitingForBlocks) {
+			divPlanetListBlocks.innerHTML += planetBut(p)+" ";
+		}
+	}
+	
+	divPlanetListEnergy.innerHTML = "";
+	if (planetsWaitingForEnergy.length > 0) {
+		divPlanetListEnergy.innerHTML = "waiting for 82% energy:<br>";
+		for (let p of planetsWaitingForEnergy) {
+			divPlanetListEnergy.innerHTML += planetBut(p)+" ";
+		}
+	}
+	
 	loopIsBusy = false;
 }
 
@@ -128,6 +147,12 @@ function render(div) {
 	
 	divStatus = document.createElement("div");
 	div.appendChild(divStatus);
+	divPlanetListBlocks = document.createElement("div");
+	divPlanetListBlocks.style.backgroundColor = "#006";
+	div.appendChild(divPlanetListBlocks);
+	divPlanetListEnergy = document.createElement("div");
+	divPlanetListEnergy.style.backgroundColor = "#040";
+	div.appendChild(divPlanetListEnergy);
 	divLog = document.createElement("div");
 	div.appendChild(divLog);
 	
