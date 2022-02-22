@@ -21305,7 +21305,6 @@ var ISS = class {
     this.spaceShipType = ArtifactType.ShipMothership;
     this.destinationPlanet = ui.getSelectedPlanet();
     this.accountOptions = [];
-    this.getShipsAndPlanets();
     this.setSignersContractConnections();
   }
   getShipsAndPlanets() {
@@ -21315,6 +21314,7 @@ var ISS = class {
     }
   }
   async moveShipToPlanet(to) {
+    this.getShipsAndPlanets();
     const account = this.selectedAccount;
     if (!account)
       throw new Error("account not selected");
