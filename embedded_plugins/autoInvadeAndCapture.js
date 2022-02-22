@@ -63,7 +63,7 @@ function htmlBut(str, onClickStr) {
 }
 
 function planetBut(p) {
-	return htmlBut(p.locationId.substr(0, 8), "ui.centerLocationId('"+p.locationId+"');");
+	return htmlBut(p.locationId.substr(4, 5), "ui.centerLocationId('"+p.locationId+"');");
 }
 
 let capturingPlanets = {};
