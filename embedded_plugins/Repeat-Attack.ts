@@ -24,6 +24,13 @@ import {
   //@ts-ignore
 } from "https://unpkg.com/htm/preact/standalone.module.js";
 
+import {
+  canStatUpgrade,
+  canPlanetUpgrade,
+  getPlanetRank,
+  //@ts-ignore
+} from 'https://plugins.zkga.me/utils/utils.js';
+
 const getPlanetString = (locationId: LocationId): string => {
   const planet = df.getPlanetWithId(locationId);
   // Type-${PlanetTypeNames[planet.planetType].slice(0,3)
@@ -39,27 +46,16 @@ const getPlanetRank = (planet: Planet | undefined): number => {
   return planet.upgradeState.reduce((a, b) => a + b);
 };
 
-const calcSilver = (srcPlanet: Planet): number => {
-  var silver = 0;
+const calcSilver = (srcPlanet: Planet, destPlanet: Planet): number => {
+  var silver = srcPlanet.silver;
+  var silverNeeded = destPlanet.silverCap - destPlanet.silver;
   // Send silver w repeat Attack
-  if(srcPlanet.planetType === PlanetType.SILVER_MINE) {
-    // Send asteroid silver if > 75%
-    if(srcPlanet.silver/srcPlanet.silverCap * 100 > 75) {
-      silver = Math.floor(srcPlanet.silver * 75/100);
-    }
-    else {
-      silver = 0;
-    }
+  if(srcPlanet.planetType === PlanetType.PLANET) {
+    if(canPlanetUpgrade(srcPlanet)) return 0;
   }
-  // send all silver from foundries
-  else if(srcPlanet.planetType === PlanetType.RUINS) {
-    silver = srcPlanet.silver
-  }
-  else if(srcPlanet.planetType === PlanetType.PLANET) {
-    if(isFullRank(srcPlanet))silver = srcPlanet.silver;
-  }
-  else {
-    silver = 0;
+  // only send silver needed.
+  if(silver > silverNeeded ) {
+    silver = silverNeeded
   }
   return silver;
 }
@@ -162,7 +158,9 @@ class Repeater {
 
 const ExecuteAttack = (srcId: LocationId, targetId: LocationId) => {
   let srcPlanet = df.getPlanetWithId(srcId);
-  if (!srcPlanet) {
+  let targetPlanet = df.getPlanetWithId(targetId);
+
+  if (!srcPlanet || !targetPlanet) {
     // Well shit
     return;
   }
@@ -178,7 +176,7 @@ const ExecuteAttack = (srcId: LocationId, targetId: LocationId) => {
       (PERCENTAGE_TRIGGER - PERCENTAGE_SEND);
 
     const FORCES = Math.floor((srcPlanet.energyCap * overflow_send) / 100);
-    const silver = calcSilver(srcPlanet);
+    const silver = calcSilver(srcPlanet, targetPlanet);
     console.log(`sending silver`, silver);
   
     df.move(srcId, targetId, FORCES, silver);

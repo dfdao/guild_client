@@ -257,7 +257,7 @@ export interface ContractConstants {
      The speed boost a movement receives when abandoning
      a planet.
    */
-  ABANDON_SPEED_CHANGE_PERCENT: number;
+  _SPEED_CHANGE_PERCENT: number;
   /**
      The range boost a movement receives when abandoning
      a planet.
