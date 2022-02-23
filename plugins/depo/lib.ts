@@ -6,8 +6,7 @@ import { ArtifactId } from "@darkforest_eth/types";
 import {
   artifactIdFromEthersBN,
   artifactIdToDecStr,
-  //@ts-ignore
-} from "http://cdn.skypack.dev/@darkforest_eth/serde";
+} from "@darkforest_eth/serde";
 import { LogDescription } from "ethers/lib/utils";
 
 export function initializeState(events: LogDescription[]) {
