@@ -93,7 +93,7 @@ import {
 } from '@darkforest_eth/types';
 import bigInt, { BigInteger } from 'big-integer';
 import delay from 'delay';
-import { BigNumber, Contract, ContractInterface, providers } from 'ethers';
+import { BigNumber, Contract, ContractInterface, ethers, providers } from 'ethers';
 import { EventEmitter } from 'events';
 import NotificationManager from '../../Frontend/Game/NotificationManager';
 import { MIN_CHUNK_SIZE } from '../../Frontend/Utils/constants';
@@ -848,7 +848,7 @@ class GameManager extends EventEmitter {
     const confirmationQueue = new ThrottledConcurrentQueue({
       invocationIntervalMs: 1000,
       maxInvocationsPerIntervalMs: 10,
-      maxConcurrency: 1,
+      maxConcurrency: 20,
     });
 
     for (const unconfirmedTx of unconfirmedTxs) {
@@ -1961,9 +1961,10 @@ class GameManager extends EventEmitter {
       // to resolve that error. if the asynchronous `beforeRetry` function returns
       // true, retry initializing the player. if it returns false, or if the
       // `beforeRetry` is undefined, then don't retry and throw an exception.
+      // Need price in gwei ()
       while (true) {
         try {
-          const tx = await this.contractsAPI.submitTransaction(txIntent);
+          const tx = await this.contractsAPI.submitTransaction(txIntent, {gasPrice: ethers.utils.parseUnits('50','gwei')});
           await tx.confirmedPromise;
           break;
         } catch (e) {
