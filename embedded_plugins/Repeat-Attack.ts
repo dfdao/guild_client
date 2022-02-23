@@ -31,6 +31,18 @@ import {
   //@ts-ignore
 } from 'https://plugins.zkga.me/utils/utils.js';
 
+const emptyAddress = "0x0000000000000000000000000000000000000000";
+
+const isOwned = (planet: Planet):boolean => {
+  return planet.owner !== emptyAddress;
+}
+
+function getArrivalsForPlanet(planetId: LocationId) {
+  return df.getAllVoyages().filter(arrival => arrival.toPlanet === planetId).filter(p => p.arrivalTime > Date.now() / 1000);
+}
+const hasJunk = (planet: Planet): boolean => {
+  return planet.spaceJunk > 0;
+}
 const getPlanetString = (locationId: LocationId): string => {
   const planet = df.getPlanetWithId(locationId);
   // Type-${PlanetTypeNames[planet.planetType].slice(0,3)
@@ -45,6 +57,7 @@ const getPlanetRank = (planet: Planet | undefined): number => {
   //@ts-ignore
   return planet.upgradeState.reduce((a, b) => a + b);
 };
+
 
 const calcSilver = (srcPlanet: Planet, destPlanet: Planet): number => {
   var silver = srcPlanet.silver;
@@ -93,6 +106,8 @@ function planetCurrentPercentEnergy(planet: Planet) {
 interface Attack {
   srcId: LocationId;
   targetId: LocationId;
+  srcHasJunk: boolean;
+  srcNeedsJunk: boolean;
 }
 
 // I use `let` here to sidestep any weird execution env problems
@@ -138,8 +153,9 @@ class Repeater {
     localStorage.setItem(`repeatAttacks-${this.account}`, JSON.stringify(this.attacks));
   }
 
-  addAttack(srcId: LocationId, targetId: LocationId) {
-    this.attacks.push({ srcId, targetId } as Attack);
+  addAttack(srcId: LocationId, targetId: LocationId, srcHasJunk: boolean, srcNeedsJunk: boolean) {
+    this.attacks.push({ srcId, targetId, srcHasJunk, srcNeedsJunk } as Attack);
+    console.log("new attack", this.attacks.slice(-1))
     this.saveAttacks();
   }
   removeAttack(position: number) {
@@ -147,23 +163,69 @@ class Repeater {
     this.saveAttacks()
   }
 
-
-
   coreLoop() {
     this?.attacks?.forEach((a) => {
-      ExecuteAttack(a.srcId, a.targetId);
+      ExecuteAttack(a.srcId, a.targetId, a.srcHasJunk, a.srcNeedsJunk);
     });
   }
 }
 
-const ExecuteAttack = (srcId: LocationId, targetId: LocationId) => {
+const ExecuteAttack = (
+  srcId: LocationId, 
+  targetId: LocationId, 
+  srcHasJunk: boolean | undefined, 
+  srcNeedsJunk: boolean | undefined
+) => {
   let srcPlanet = df.getPlanetWithId(srcId);
   let targetPlanet = df.getPlanetWithId(targetId);
+  var abandoning = false;
+  var isNeedJunkAttack = false;
 
   if (!srcPlanet || !targetPlanet) {
     // Well shit
     return;
   }
+
+  const arrivals = getArrivalsForPlanet(targetPlanet.locationId);
+
+  if(srcHasJunk && srcNeedsJunk) {
+    console.log("can't execute attack with srcNeeds and srcHas");
+    return;
+  }
+  else if(srcHasJunk && !srcNeedsJunk) {
+    if(arrivals.length > 0) {
+      console.log("planet has pending arrivals");
+      return;
+    }
+    // Don't send a move if one is already in progress.
+    // This will prevent a voyage being sent that stops other player from abandoning.
+
+    // Alt: If targetId unowned and has junk, send 1 move.
+    // Assumes junk will accumulate to planet on next move.
+    if(isOwned(targetPlanet) && !hasJunk(targetPlanet)) {
+      console.log(`${getPlanetName(targetPlanet)} is owned or has no junk`);
+      return; // don't attack
+    } 
+  }
+  // Dao abandons if they own
+  else if(!srcHasJunk && srcNeedsJunk) {
+    if(arrivals.length > 0) {
+      console.log("planet has pending arrivals");
+      return;
+    }
+    // don't send if an arrival is en route.
+
+    if(targetPlanet.owner == srcPlanet.owner) {
+      console.log(`${getPlanetName(targetPlanet)} is owned by ${targetPlanet.owner} and will abandon`)
+      // abandon from target to source
+      df.move(targetId, srcId, 0, 0, undefined, true);
+      return;
+    }
+    if(hasJunk(targetPlanet)) return; // don't move planet has junk on it
+
+    
+  }
+
   // Needs updated check getUnconfirmedDepartingForces
   const departingForces = unconfirmedDepartures(srcPlanet);
   const TRIGGER_AMOUNT = Math.floor(
@@ -179,7 +241,7 @@ const ExecuteAttack = (srcId: LocationId, targetId: LocationId) => {
     const silver = calcSilver(srcPlanet, targetPlanet);
     console.log(`sending silver`, silver);
   
-    df.move(srcId, targetId, FORCES, silver);
+    df.move(srcId, targetId, FORCES, silver, undefined, abandoning);
   }
 };
 
@@ -189,6 +251,8 @@ let Spacing = {
 };
 let VerticalSpacing = {
   marginBottom: "12px",
+  marginLeft: "12px",
+  marginRight: "12px",
 };
 let HalfVerticalSpacing = {
   marginBottom: "6px",
@@ -219,15 +283,16 @@ function Attack({ attack, onDelete }: { attack: Attack; onDelete: () => {} }) {
         <span
           style=${{ ...Spacing, ...Clickable }}
           onClick=${() => centerPlanet(attack.srcId)}
-          >${getPlanetString(attack.srcId)}</span
-        >
+          >${getPlanetString(attack.srcId)} 
+        </span>
         =>
         <span
           style=${{ ...Spacing, ...Clickable }}
           onClick=${() => centerPlanet(attack.targetId)}
           >${getPlanetString(attack.targetId)}</span
-        ></span
-      >
+        >
+        =>
+      </span>
       <button onClick=${onDelete}>X</button>
     </div>
   `;
@@ -236,13 +301,21 @@ function Attack({ attack, onDelete }: { attack: Attack; onDelete: () => {} }) {
 function AddAttack({
   onCreate,
 }: {
-  onCreate: (source: LocationId, target: LocationId) => {};
+  onCreate: (
+    source: LocationId, 
+    target: LocationId, 
+    srcHasJunk: boolean, 
+    srcNeedsJunk: boolean
+  ) => {};
 }) {
   let [planet, setPlanet] = useState<Planet | undefined>(
     ui.getSelectedPlanet()
   );
   let [source, setSource] = useState<Planet | undefined>(undefined);
   let [target, setTarget] = useState<Planet | undefined>(undefined);
+  let [srcHasJunk, setsrcHasJunk] = useState<boolean>(false);
+  let [srcNeedsJunk, setsrcNeedsJunk] = useState<boolean>(false);
+
   useLayoutEffect(() => {
     let onClick = () => {
       setPlanet(ui.getSelectedPlanet());
@@ -267,10 +340,26 @@ function AddAttack({
       <span style=${{ ...Spacing, marginRight: "auto" }}
         >${target ? getPlanetString(target.locationId) : "?????"}</span
       >
+      <button style=${VerticalSpacing} onClick=${() => setsrcHasJunk(!srcHasJunk)}>
+        Src Has Junk
+      </button>
+      <span style=${{ ...Spacing, marginRight: "auto" }}
+        >${srcHasJunk ? 'Y' : 'N'}</span
+      >
+      <button style=${VerticalSpacing} onClick=${() => setsrcNeedsJunk(!srcNeedsJunk)}>
+        Src Needs Junk
+      </button>
+      <span style=${{ ...Spacing, marginRight: "auto" }}
+        >${srcNeedsJunk ? 'Y' : 'N'}</span
+      >
       <button
         style=${VerticalSpacing}
         onClick=${() =>
-          target && source && onCreate(source.locationId, target.locationId)}
+          target && source && onCreate(
+            source.locationId, 
+            target.locationId, 
+            srcHasJunk,
+            srcNeedsJunk)}
       >
         start
       </button>
@@ -311,8 +400,21 @@ function AttackList({ repeater }: { repeater: Repeater }) {
       >Auto-attack when source planet >75% energy. Will send silver if silver > 75%
     </i>
     <${AddAttack}
-      onCreate=${(source: LocationId, target: LocationId) =>
-        repeater.addAttack(source, target)}
+      onCreate=${(
+        source: LocationId, 
+        target: LocationId, 
+        srcHasJunk: boolean, 
+        srcNeedsJunk: boolean
+        ) => 
+        {
+          if(srcHasJunk && srcNeedsJunk) {
+            console.log("Cannot select Has and Needs");
+            return;
+          }
+          repeater.addAttack(source, target, srcHasJunk, srcNeedsJunk)
+
+        }
+      }
     />
     <h1 style=${HalfVerticalSpacing}>
       Recurring Attacks (${actionsChildren.length})
@@ -342,11 +444,6 @@ class Plugin {
     window.__CORELOOP__.forEach((id) => window.clearInterval(id));
   }
 
-// localStorage.setItem("names", JSON.stringify(names));
-
-// //...
-// var storedNames = JSON.parse(localStorage.getItem("names"));  
-
   constructor() {
     this.repeater = new Repeater();
     this.root = undefined;
@@ -358,7 +455,7 @@ class Plugin {
    */
   async render(container: HTMLDivElement) {
     this.container = container;
-    container.style.width = "500px";
+    container.style.width = "600px";
     this.root = render(html`<${App} repeater=${this.repeater} />`, container);
   }
 
