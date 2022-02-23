@@ -10,7 +10,7 @@ import {
 } from "http://cdn.skypack.dev/@darkforest_eth/serde";
 import { LogDescription } from "ethers/lib/utils";
 
-function initializeState(events: LogDescription[]) {
+export function initializeState(events: LogDescription[]) {
   const acc = {};
 
   // I bet this gets a bit gnarly if we are depositing a the same artifact multiple times
@@ -26,7 +26,7 @@ function initializeState(events: LogDescription[]) {
         e.args[1] as EthersBN
       );
       //@ts-ignore
-      acc[artifactId] = true;
+      acc[artifactId] = false;
     }
   });
   //@ts-ignore
@@ -39,17 +39,19 @@ export const initializeContract = async () => {
 
   const eventHandlers = {
     ["Deposit"]: (addr: string, rawArtifactId: EthersBN) => {
-      console.log("New Artifact is available for withdrawal");
+      //@ts-ignore
+      df.hardRefreshArtifact(
+        artifactIdFromEthersBN(rawArtifactId) as ArtifactId
+      );
+      console.log(`${artifactIdFromEthersBN(rawArtifactId)} was deposited`);
     },
     ["Withdrawl"]: (addr: string, rawArtifactId: EthersBN) => {
       console.log(
         `artifact ${artifactIdFromEthersBN(rawArtifactId)} was withdrawn`
       );
     },
-    ["Promote"]: (addr: string, rawArtifactId: EthersBN) => {
-      console.log(
-        `artifact ${artifactIdFromEthersBN(rawArtifactId)} was withdrawn`
-      );
+    ["Promote"]: (promotor: string, promoted: string) => {
+      console.log(`${promoted} was promoted`);
     },
   };
   const ethConnection = df.getEthConnection();
@@ -71,7 +73,7 @@ export const initializeContract = async () => {
     .then((logs) => {
       return logs.map((log) => depo.interface.parseLog(log));
     })
-    .then((l) => initializeState);
+    .then(initializeState);
 
   ethConnection.subscribeToContractEvents(depo, eventHandlers, filters);
   const core: DarkForest = df.getContract();
