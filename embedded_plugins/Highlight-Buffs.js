@@ -6,6 +6,35 @@
 
 import { PlanetType, PlanetTypeNames, PlanetLevel, PlanetLevelNames } from "https://cdn.skypack.dev/@darkforest_eth/types";
 
+import { isSpaceShip } from "http://cdn.skypack.dev/@darkforest_eth/gamelogic"
+
+const ADDRESS_LOCAL_STORAGE_KEY = 'KNOWN_ADDRESSES';
+
+const loadAccounts = plugin => {
+  const knownAddresses = [];
+  const accounts = [];
+  const serializedAddresses = localStorage.getItem(ADDRESS_LOCAL_STORAGE_KEY);
+  if (serializedAddresses !== null) {
+    const addresses = JSON.parse(serializedAddresses);
+    for (const addressStr of addresses) {
+    knownAddresses.push(addressStr);
+    }
+  }
+  for (const addy of knownAddresses) {
+    accounts.push({ address: addy });
+  }
+  plugin.accounts = accounts;
+}
+
+const loadSpaceships = plugin => {
+  for(const acc of plugin.accounts) {
+    const spaceshipsOwnedByAccount = df.entityStore
+      .getArtifactsOwnedBy(acc.address)
+      .filter(artifact => isSpaceShip(artifact.artifactType));
+    plugin.spaceships = [...plugin.spaceships, ...spaceshipsOwnedByAccount];
+  }
+}
+
 // Half Junk is probably only available in Dark Forest v0.6 Round 5 "Space Junk"
 // Use this to hide/show the Half Junk highlight button
 const ENABLE_HALF_JUNK_BUTTON = true;
@@ -111,6 +140,8 @@ const periodMsHighlight2xEnergyGro = 1451;
 const periodMsHighlight2xDefense = 1543;
 const periodMsHighlight2xSpeed = 1657;
 const periodMsHighlight2xRange = 1753;
+const periodMsHighlightInvadeNoCapture = 1787;
+const periodMsHighlightSpaceship = 1699;
 const periodMsHighlightHalfJunk = 1831;
 
 // Set up colours for each of the highlights. Use similar colours to asteroid colour for 2x buffs.
@@ -121,6 +152,8 @@ const colsHighlight2xEnergyGro = [120, 255, 120];
 const colsHighlight2xDefense = [180, 140, 255];
 const colsHighlight2xSpeed = [255, 100, 255];
 const colsHighlight2xRange = [225, 225, 80];
+const colsHighlightInvadeNoCapture = [170, 255, 100];
+const colsHighlightSpaceship = [190, 100, 255];
 const colsHighlightHalfJunk = [180, 150, 130];
 
 // Helper functions for filters
@@ -130,6 +163,10 @@ const prospectExpired = (plugin, planet) => {
   if (planet.hasTriedFindingArtifact) return false;
   return planet.prospectedBlockNumber + 255 - df.contractsAPI.ethConnection.blockNumber <= 0;  // 256 blocks to prospect an artifact
 }
+const emptyAddress = "0x0000000000000000000000000000000000000000";
+const planetWasAlreadyInvaded = p => p.invader !== emptyAddress;
+const planetWasAlreadyCaptured = p => p.capturer !== emptyAddress;
+const planetHasRelevantSpaceship = (plugin, planet) => planet.heldArtifactIds.some(id => plugin.spaceships.some(spaceship => id === spaceship.id));
 const distanceToPlanetSquared = planet => planet.location ? (viewport.centerWorldCoords.x - planet.location.coords.x) ** 2 + (viewport.centerWorldCoords.y - planet.location.coords.y) ** 2 : MAX_DISTANCE;
 const distanceInRange = (plugin, planet) => distanceToPlanetSquared(planet) <= plugin.getSelectValue(RANGE_MAX) ** 2;
 const levelInRange = (plugin, planet) => plugin.getSelectValue(LEVEL_MIN) <= planet.planetLevel && planet.planetLevel <= plugin.getSelectValue(LEVEL_MAX);
@@ -146,7 +183,9 @@ const filter2xEnergyGro = filter2xStat(StatIdx.EnergyGro);
 const filter2xDefense = filter2xStat(StatIdx.Defense, 0);  // defense rank upgrades are on planet.upgradeState[0]
 const filter2xSpeed = filter2xStat(StatIdx.Speed, 2);  // speed rank upgrades are on planet.upgradeState[2]
 const filter2xRange = filter2xStat(StatIdx.Range, 1);  // range rank upgrades are on planet.upgradeState[1]
+const filterInvadeNoCapture = (plugin, planet) => mainChecks(plugin, planet) && planetWasAlreadyInvaded(planet) && !planetWasAlreadyCaptured(planet);
 const filterHalfJunk = filter2xStat(StatIdx.HalfJunk);
+const filterSpaceship = (plugin, planet) => mainChecks(plugin, planet) && planetHasRelevantSpaceship(plugin, planet);
 const filterRip = (plugin, planet) => mainChecks(plugin, planet) && planet.planetType === PlanetType.TRADING_POST;
 const filterArtifact = (plugin, planet) => {
   // Filter out planets of wrong size
@@ -375,6 +414,10 @@ class Plugin {
     this.ui = {};
     this.ui.select = {};
     initialiseSelectWrappers(this);
+    this.accounts = [];
+    this.spaceships = [];
+    loadAccounts(this);
+    loadSpaceships(this);
     this.drawOptions = {
       ellipse: {value: false, label: "Ellipse"},
       pulseOpacity: {value: true, label: "Pulse Opacity"},
@@ -396,6 +439,8 @@ class Plugin {
       planetsWith2xRange: {label: "Range", filter: filter2xRange, array: [TOGGLE_OFF], periodMs: periodMsHighlight2xRange, cols: colsHighlight2xRange},
     };
     if (ENABLE_HALF_JUNK_BUTTON) this.highlightData['planetsWithHalfJunk'] = {label: "Half Junk", filter: filterHalfJunk, array: [TOGGLE_OFF], periodMs: periodMsHighlightHalfJunk, cols: colsHighlightHalfJunk};
+    this.highlightData['planetsWithInvadeNoCapture'] = {label: "Need Capture", filter: filterInvadeNoCapture, array: [TOGGLE_OFF], periodMs: periodMsHighlightInvadeNoCapture, cols: colsHighlightInvadeNoCapture};
+    this.highlightData['planetsWithSpaceship'] = {label: "Spaceship", filter: filterSpaceship, array: [TOGGLE_OFF], periodMs: periodMsHighlightSpaceship, cols: colsHighlightSpaceship};
     this.highlightList = Object.keys(this.highlightData);
     console.log(`Initialised ${PLUGIN_NAME} plugin:`);
     console.dir(this);
