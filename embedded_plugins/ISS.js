@@ -21234,6 +21234,9 @@ var ShipOptions = [
 ];
 
 // embedded_plugins/unused/ISS.ts
+var OFF_LIMITS_PLANETS = [
+  "00003c9a0001a79de8fb5e29aca6241b62259c52778a6ba3aabfe8e048697e21"
+];
 var ADDRESS_LOCAL_STORAGE_KEY = "KNOWN_ADDRESSES";
 function load() {
   const knownAddresses = [];
@@ -21302,7 +21305,7 @@ var ISS = class {
     this.signers = new Map();
     this.contractConnections = new Map();
     this.ethConnection = df.getEthConnection();
-    this.spaceShipType = ArtifactType.ShipMothership;
+    this.spaceShipType = ArtifactType.ShipCrescent;
     this.destinationPlanet = ui.getSelectedPlanet();
     this.accountOptions = [];
     this.setSignersContractConnections();
@@ -21338,6 +21341,8 @@ var ISS = class {
     const contract = this.contractConnections.get(account);
     if (!contract)
       throw new Error("contract not defined");
+    if (OFF_LIMITS_PLANETS.includes(to.locationId))
+      throw new Error("planet is off limits");
     const forces = 0;
     const silver = 0;
     this.Status.innerHTML = "building move args...";
