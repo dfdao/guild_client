@@ -155,7 +155,7 @@ function CaptureZones() {
   return (
     <Numbers>
       <TooltipTrigger name={TooltipName.Empty} extraContent={<CaptureZoneExplanation />}>
-        Capture Zones change in {nextGenerationBlock - (currentBlockNumber || 0)} blocks.
+        Capture Zones change in {nextGenerationBlock - (currentBlockNumber || 0) * 5.5 / 60} sec.
       </TooltipTrigger>
     </Numbers>
   );
