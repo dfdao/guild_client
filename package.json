@@ -64,7 +64,8 @@
     "clean": "del-cli dist node_modules declarations public/contracts",
     "docs": "typedoc && yarn format",
     "deploy": "netlify build && netlify deploy",
-    "deploy:prod": "netlify build && netlify deploy --prod"
+    "deploy:prod": "netlify build && netlify deploy --prod",
+    "plugin-dev": "df-plugin-dev-server"
   },
   "browserslist": {
     "production": [
@@ -116,6 +117,7 @@
     "webpack": "^5.62.1",
     "webpack-bundle-analyzer": "^4.5.0",
     "webpack-cli": "^4.9.1",
-    "webpack-dev-server": "^4.4.0"
+    "webpack-dev-server": "^4.4.0",
+    "@projectsophon/df-plugin-dev-server": "^1.4.0"
   }
 }
