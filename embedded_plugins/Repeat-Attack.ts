@@ -179,7 +179,7 @@ const ExecuteAttack = (
   let srcPlanet = df.getPlanetWithId(srcId);
   let targetPlanet = df.getPlanetWithId(targetId);
   var abandoning = false;
-  var isNeedJunkAttack = false;
+  var moveIsTakeJunk = false;
 
   if (!srcPlanet || !targetPlanet) {
     // Well shit
@@ -205,6 +205,10 @@ const ExecuteAttack = (
     if(isOwned(targetPlanet) && !hasJunk(targetPlanet)) {
       console.log(`${getPlanetName(targetPlanet)} is owned or has no junk`);
       return; // don't attack
+    }
+    else if (!isOwned(targetPlanet) && hasJunk(targetPlanet)) {
+      console.log("making a minimal capture for junk");
+      moveIsTakeJunk = true;
     } 
   }
   // Dao abandons if they own
@@ -222,7 +226,6 @@ const ExecuteAttack = (
       return;
     }
     if(hasJunk(targetPlanet)) return; // don't move planet has junk on it
-
     
   }
 
@@ -232,6 +235,18 @@ const ExecuteAttack = (
     (srcPlanet.energyCap * PERCENTAGE_TRIGGER) / 100
   );
   const FUZZY_ENERGY = Math.floor(srcPlanet.energy - departingForces); //Best estimate of how much energy is ready to send
+  if(moveIsTakeJunk) {
+    const FORCES = targetPlanet
+    const silver = calcSilver(srcPlanet, targetPlanet);
+    console.log(`sending silver`, silver);
+
+    const energyArriving = 1 + (targetPlanet.energy * (targetPlanet.defense / 100));
+    // needs to be a whole number for the contract
+    const energyNeeded = Math.ceil(df.getEnergyNeededForMove(srcPlanet.locationId, targetPlanet.locationId, energyArriving));
+
+    df.move(srcId, targetId, energyNeeded, silver, undefined, abandoning);
+    return;
+  }
   if (FUZZY_ENERGY > TRIGGER_AMOUNT) {
     const overflow_send =
       planetCurrentPercentEnergy(srcPlanet) -
@@ -243,6 +258,8 @@ const ExecuteAttack = (
   
     df.move(srcId, targetId, FORCES, silver, undefined, abandoning);
   }
+
+
 };
 
 let Spacing = {
@@ -397,7 +414,7 @@ function AttackList({ repeater }: { repeater: Repeater }) {
   return html`
     <h1>Set-up a Recurring Attack</h1>
     <i style=${{ ...VerticalSpacing, display: "block" }}
-      >Auto-attack when source planet >75% energy. Will send silver if silver > 75%
+      >Auto-attack when source planet >75% energy. Will send all silver target can hold unless planet can upgrade
     </i>
     <${AddAttack}
       onCreate=${(
