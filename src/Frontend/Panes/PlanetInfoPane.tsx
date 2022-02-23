@@ -38,7 +38,7 @@ export function PlanetInfoPane({ initialPlanetId }: { initialPlanetId: LocationI
         <TooltipTrigger name={TooltipName.Empty} extraContent={<>coords</>}>
           <TextPreview
             style={{ color: dfstyles.colors.subtext }}
-            text={`(${planet.location.coords.x}, ${planet.location.coords.y})`}
+            text={`({x:${planet.location.coords.x}, y:${planet.location.coords.y}})`}
             focusedWidth={'150px'}
             unFocusedWidth={'150px'}
           />
