@@ -12,23 +12,20 @@ import {
 // @ts-ignore
 import { getPlanetName } from "http://cdn.skypack.dev/@darkforest_eth/procedural";
 import { Button, Text, LineBreak, Stepper, Select } from "./views/basics";
+import { QueuedArrival } from "@darkforest_eth/types";
 
 function getArrivalsForPlanet(planetId: LocationId) {
     return df.getAllVoyages().filter(arrival => arrival.toPlanet === planetId).filter(p => p.arrivalTime > Date.now() / 1000);
   }
 
-function getInvaderArrivals(planetId: LocationId) {
-    const invaderArrivals = df.getAllVoyages()
-    .filter(
-        arrival => 
-        arrival.toPlanet === planetId &&
-        arrival.arrivalTime > Date.now() / 1000
-        && df.getPlanetWithId(arrival.fromPlanet)?.owner == df.getPlanetWithId(planetId)?.owner
-    );
-
-    console.log(`invader arrivals ${invaderArrivals}`)
+function getInvaderArrivals(target: Planet) {
+    const arrivalsForPlanet = getArrivalsForPlanet(target.locationId);
+    var invaderArrivals:QueuedArrival[]  = [];
+    if(arrivalsForPlanet) {
+        invaderArrivals = arrivalsForPlanet.filter(a => df.getPlanetWithId(a.fromPlanet)?.owner === target.owner);
+    }
+    console.log(`Does ${getPlanetName(target)} have invader arrivals?`, invaderArrivals)
     return invaderArrivals
-
 }
 
 const CAPTURE_ZONE_POINTS = [
@@ -44,7 +41,18 @@ const CAPTURE_ZONE_POINTS = [
     100000000
 ]
 
-
+const PLANET_LEVEL_JUNK = [
+    20,
+    25,
+    30,
+    35,
+    40,
+    45,
+    50,
+    55,
+    60,
+    65
+]
 
 const attackLimit = 10
 
@@ -129,14 +137,13 @@ function getCaptureZoneTargets(
     const targets = targetList
     .filter((p) => 
         p.owner != invader.owner &&
+        p.locationId !== invader.locationId &&
         p.planetLevel >= minCaptureLevel &&
         !planetWasAlreadyCaptured(p) &&
-        p.locationId !== invader.locationId &&
-        getInvaderArrivals(p.locationId).length === 0 && // dont send to planets that have already have arrrivals from invader
-        df.getTimeForMove(invader.locationId,p.locationId) < maxtime 
-        &&
-        (attack || p.owner == PIRATES)  
-         && (attackInvaded || !planetWasAlreadyInvaded(p))
+        df.getTimeForMove(invader.locationId,p.locationId) < maxtime &&
+        getInvaderArrivals(p).length === 0 && // dont send to planets that have already have arrrivals from invader
+        (attack || p.owner === PIRATES)  && 
+        (attackInvaded || !planetWasAlreadyInvaded(p))
     )
     // .filter((p) => df.getLocationOfPlanet(p.locationId)) // need this bc potential undefined planet
     // .filter((p) => (p.planetLevel >= minCaptureLevel)) // only capture min planet level
@@ -159,7 +166,17 @@ function getCaptureZoneTargets(
     .filter((p) => {
         return (p.energyNeeded < (( (100 - minPercentEnergyToKeep) / 100 ) * invader.energyCap) )
     })
-    .sort((p1, p2) => p2.planet.planetLevel - p1.planet.planetLevel) // Sort descending
+    .sort((p1, p2) => {
+        if(p2.planet.planetLevel !== p1.planet.planetLevel) {
+            return  p2.planet.planetLevel - p1.planet.planetLevel
+        } // Sort large planets first
+        // if equal, choose closer ones.
+        else {
+            const distFromInvader1 = distance(invader.location.coords, p1.planet.location.coords) 
+            const distFromInvader2 = distance(invader.location.coords, p2.planet.location.coords) 
+            return distFromInvader1 - distFromInvader2;
+        }
+    })
   
     console.log("results from filter", targets);
     return targets;
@@ -184,6 +201,7 @@ function sendAttacks(
     let energySpent = 0;
     let moves = 0;
     let expectedScore = 0;
+    let expectedJunk = 0;
 
     for(const p of planets) {
         console.log(`Budget ${energyBudget} vs Spent ${energySpent}`);
@@ -202,10 +220,11 @@ function sendAttacks(
         if(!dry) df.move(invader.locationId, p.planet.locationId, energyNeeded, 0);
         energySpent += energyNeeded;
         expectedScore += CAPTURE_ZONE_POINTS[p.planet.planetLevel];
+        if (p.planet.owner === PIRATES) expectedJunk += PLANET_LEVEL_JUNK[p.planet.planetLevel];
         i++;
         moves++;
     }
-    return [moves,expectedScore];
+    return [moves,expectedScore, expectedJunk];
 }
 
 function getTimeRemaining() {
@@ -270,14 +289,14 @@ class CrawlCapture implements DFPlugin {
         }
         
         planetsToCapture?.forEach((a) => console.log(getPlanetString(a.planet)));
-        const [moves, points] = sendAttacks(
+        const [moves, points, junk] = sendAttacks(
             this.selectedPlanet, 
             planetsToCapture, 
             this.minPercentEnergyToKeep, 
             this.dry,
             attackLimit
         );
-        this.crawlStatus.innerHTML = `crawling ${moves} planets for ${points} points`;
+        this.crawlStatus.innerHTML = `crawling ${moves} planets for ${points} points and ${junk} junk`;
     }
 
    /**
