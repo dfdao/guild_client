@@ -86,7 +86,8 @@ import {
             planet.owner !== ZERO_ADDRESS && 
             planet.locationId !== source
         )
-        .sort((planet) => df.getDist(source, planet.locationId));
+        // Get closest planet
+        .sort((p1, p2) => df.getDist(p1.locationId, source) - df.getDist(p2.locationId, source));
       if (ownedPlanetsInRange.length === 0) return undefined;
       return ownedPlanetsInRange;
     };
