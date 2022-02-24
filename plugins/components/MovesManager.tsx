@@ -26,16 +26,17 @@ export function MovesManager(): JSX.Element {
     const wallet = signers.find((s) => s.address === account);
     const fromPlanet = getPlanetWithId(fromLocationId);
     const toPlanet = getPlanetWithId(toLocationId);
-    const artifact = getArtifactWithId(artifactId);
+
+    // const artifact = artifactId.length > 0 ? getArtifactWithId(artifactId) : undefined;
     const energy = Math.ceil(1.03 * getEnergyNeededForMove(fromLocationId, toLocationId, 0));
 
-    if (wallet && fromPlanet && toPlanet && artifact) {
+    if (wallet && fromPlanet && toPlanet) {
       const move = {
         id: 0,
         account: wallet.address,
         fromLocationId,
         toLocationId,
-        artifactId,
+        artifactId: artifactId.length > 0 ? artifactId : undefined,
         energy,
       };
       const { error } = addMove(move);
@@ -58,9 +59,11 @@ export function MovesManager(): JSX.Element {
       if (!toPlanet) {
         error += ": to planet id";
       }
+      /*
       if (!artifact) {
         error += ": artifact id";
       }
+      */
       setError(error);
     }
   }, [account, fromLocationId, toLocationId, artifactId, setError, signers]);

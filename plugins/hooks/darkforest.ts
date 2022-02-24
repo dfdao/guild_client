@@ -1,8 +1,8 @@
 import type { Artifact, Planet, WorldLocation } from "@darkforest_eth/types";
 import { getPlanetName, artifactName } from "@darkforest_eth/procedural";
-import { useEffect, useMemo, useState } from "preact/hooks";
+import { useMemo } from "preact/hooks";
 import type { MoveSnarkContractCallArgs } from "@darkforest_eth/snarks";
-import type { ContractTransaction, ethers, PopulatedTransaction, Transaction } from "ethers";
+import type { ethers, PopulatedTransaction } from "ethers";
 import type { DarkForest } from "@darkforest_eth/contracts/typechain";
 import { CONTRACT_PRECISION } from "@darkforest_eth/constants";
 import { artifactIdToDecStr } from "@darkforest_eth/serde";
@@ -34,7 +34,8 @@ export function getContract(): DarkForest {
 
 export function getEnergyNeededForMove(fromId: string, toId: string, arrivingEnergy: number): number {
   // @ts-expect-error
-  return df.getEnergyNeededForMove(fromId, toId, arrivingEnergy);
+  const energy = df.getEnergyNeededForMove(fromId, toId, arrivingEnergy);
+  return Math.ceil(1.03 * energy);
 }
 
 interface SnarkArgsHelper {
@@ -106,14 +107,14 @@ export async function createMoveTransaction(
   provider: ethers.Signer,
   from: string,
   to: string,
-  artifactId: string,
+  artifactId: string | undefined,
   nonce: number
-): Promise<ContractTransaction | undefined> {
+): Promise<PopulatedTransaction | undefined> {
   const energy = getEnergyNeededForMove(from, to, 0);
   const oldLocation = getLocationOfPlanet(from);
   const newLocation = getLocationOfPlanet(to);
 
-  console.log("move ", oldLocation, newLocation);
+  console.log("move ", oldLocation, newLocation, energy);
   if (!oldLocation || !newLocation) {
     return;
   }
@@ -130,6 +131,7 @@ export async function createMoveTransaction(
   // @ts-expect-error
   const worldRadius = df.worldRadius;
   const snarkArgs = await getSnarkHelper().getMoveArgs(oldX, oldY, newX, newY, worldRadius, distMax);
+
   console.log(snarkArgs);
 
   const args: MoveArgs = [
@@ -145,15 +147,18 @@ export async function createMoveTransaction(
     ],
   ] as MoveArgs;
 
-  // @ts-expect-error
-  args[ZKArgIdx.DATA][MoveArgIdxs.ARTIFACT_SENT] = artifactIdToDecStr(artifactId);
+  if (artifactId) {
+    // @ts-expect-error
+    args[ZKArgIdx.DATA][MoveArgIdxs.ARTIFACT_SENT] = artifactIdToDecStr(artifactId);
+  }
 
   console.log("args", args);
   const contract = getContract().connect(provider);
-  const tx = await contract.move(args[0], args[1], args[2], args[3], {
+  const tx = await contract.populateTransaction.move(args[0], args[1], args[2], args[3], {
     nonce,
     gasLimit: 5000000,
   });
+
   return tx;
 }
 

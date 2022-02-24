@@ -2,7 +2,7 @@ import { h, JSX } from "preact";
 import { useArtifactName, usePlanetName } from "../hooks/darkforest";
 import { Move, useMothershipMoves } from "../hooks/moves";
 
-function MoveRow({ move }: { move: Move }) {
+function MoveRow({ move, onClick }: { move: Move; onClick: () => void }) {
   const { name: fromPlanet } = usePlanetName(move.fromLocationId);
   const { name: toPlanet } = usePlanetName(move.toLocationId);
   const { name: artifact } = useArtifactName(move.artifactId);
@@ -12,13 +12,16 @@ function MoveRow({ move }: { move: Move }) {
       <td>{fromPlanet}</td>
       <td>{toPlanet}</td>
       <td>{artifact}</td>
-      <td>{move.energy / 1000}</td>
+      <td>{move.energy}</td>
+      <td>
+        <button onClick={onClick}>x</button>
+      </td>
     </tr>
   );
 }
 
 export function MovesList(): JSX.Element {
-  const { moves } = useMothershipMoves();
+  const { moves, removeMove } = useMothershipMoves();
   return (
     <div>
       <p style={{ fontSize: 20 }}>Bundle Moves</p>
@@ -30,11 +33,12 @@ export function MovesList(): JSX.Element {
             <th>To Planet</th>
             <th>Artifact</th>
             <th>Energy</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           {moves.map((move) => (
-            <MoveRow key={move.id} move={move} />
+            <MoveRow key={move.id} move={move} onClick={() => removeMove(move.id)} />
           ))}
         </tbody>
       </table>

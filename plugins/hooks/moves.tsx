@@ -9,7 +9,7 @@ export interface Move {
   account: string;
   fromLocationId: string;
   toLocationId: string;
-  artifactId: string;
+  artifactId?: string;
   energy: number;
 }
 
