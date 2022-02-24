@@ -17,6 +17,20 @@ function getArrivalsForPlanet(planetId: LocationId) {
     return df.getAllVoyages().filter(arrival => arrival.toPlanet === planetId).filter(p => p.arrivalTime > Date.now() / 1000);
   }
 
+function getInvaderArrivals(planetId: LocationId) {
+    const invaderArrivals = df.getAllVoyages()
+    .filter(
+        arrival => 
+        arrival.toPlanet === planetId &&
+        arrival.arrivalTime > Date.now() / 1000
+        && df.getPlanetWithId(arrival.fromPlanet)?.owner == df.getPlanetWithId(planetId)?.owner
+    );
+
+    console.log(`invader arrivals ${invaderArrivals}`)
+    return invaderArrivals
+
+}
+
 const CAPTURE_ZONE_POINTS = [
     0,
     0,
@@ -29,6 +43,8 @@ const CAPTURE_ZONE_POINTS = [
     50000000,
     100000000
 ]
+
+
 
 const attackLimit = 10
 
@@ -112,9 +128,11 @@ function getCaptureZoneTargets(
     let targetList = getPlanetsInZone(captureZone)
     const targets = targetList
     .filter((p) => 
+        p.owner != invader.owner &&
         p.planetLevel >= minCaptureLevel &&
         !planetWasAlreadyCaptured(p) &&
-        p.locationId !== invader.locationId && 
+        p.locationId !== invader.locationId &&
+        getInvaderArrivals(p.locationId).length === 0 && // dont send to planets that have already have arrrivals from invader
         df.getTimeForMove(invader.locationId,p.locationId) < maxtime 
         &&
         (attack || p.owner == PIRATES)  
@@ -185,7 +203,7 @@ function sendAttacks(
         energySpent += energyNeeded;
         expectedScore += CAPTURE_ZONE_POINTS[p.planet.planetLevel];
         i++;
-        moves ++;
+        moves++;
     }
     return [moves,expectedScore];
 }
@@ -221,8 +239,8 @@ class CrawlCapture implements DFPlugin {
     constructor() {
         this.selectedPlanet = ui.getSelectedPlanet();
         this.minCaptureLevel=2;
-        this.attack = false;
-        this.attackInvaded = false;
+        this.attack = true;
+        this.attackInvaded = true;
         this.capturePercentage = 25;
         this.minPercentEnergyToKeep = 10;
         this.numPlanets = 5;
