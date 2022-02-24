@@ -8,8 +8,7 @@ import {
     CaptureZone,
     LocationId
     //@ts-ignore
-} from '@darkforest_eth/types'
-// from "http://cdn.skypack.dev/@darkforest_eth/types";
+} from "http://cdn.skypack.dev/@darkforest_eth/types";
 // @ts-ignore
 import { getPlanetName } from "http://cdn.skypack.dev/@darkforest_eth/procedural";
 import { Button, Text, LineBreak, Stepper, Select } from "./views/basics";
@@ -142,7 +141,7 @@ function getCaptureZoneTargets(
     .filter((p) => {
         return (p.energyNeeded < (( (100 - minPercentEnergyToKeep) / 100 ) * invader.energyCap) )
     })
-    .sort((p1, p2) => p1.planet.planetLevel - p2.planet.planetLevel) // Sort ascending
+    .sort((p1, p2) => p2.planet.planetLevel - p1.planet.planetLevel) // Sort descending
   
     console.log("results from filter", targets);
     return targets;
@@ -215,6 +214,8 @@ class CrawlCapture implements DFPlugin {
     planetInCaptureZoneName: HTMLParagraphElement;
     setCaptureZone: HTMLButtonElement;
     captureZoneText: HTMLParagraphElement;
+    dryRun: HTMLButtonElement;
+    dryText: HTMLParagraphElement;
 
 
     constructor() {
@@ -227,7 +228,6 @@ class CrawlCapture implements DFPlugin {
         this.numPlanets = 5;
         this.dry = true;
     }
-
 
     crawlCapture() {
         console.log(`Starting crawl capture from ${getPlanetName(this.selectedPlanet)}` )
@@ -259,7 +259,7 @@ class CrawlCapture implements DFPlugin {
             this.dry,
             attackLimit
         );
-        this.crawlStatus.innerHTML = `crawling ${moves} planets for ${points}`;
+        this.crawlStatus.innerHTML = `crawling ${moves} planets for ${points} points`;
     }
 
    /**
@@ -302,6 +302,14 @@ class CrawlCapture implements DFPlugin {
 
     this.captureZoneText = Text(`Capture Zone: `);
 
+    this.dryRun = Button('Dry Run?', () => {
+        this.dry = !this.dry
+        this.dryText.innerHTML = `Dry Run: ${this.dry.toString()}`;
+    })
+
+    this.dryText = Text(`Dry Run: ${this.dry.toString()}`);
+
+
     container.append(this.timeRemaining);
     container.append(LineBreak());
     container.append(this.updatePlanet);
@@ -313,6 +321,9 @@ class CrawlCapture implements DFPlugin {
     container.append(LineBreak());
     container.append(this.startCrawl);
     container.append(this.crawlStatus);
+    container.append(LineBreak());
+    container.append(this.dryRun);
+    container.append(this.dryText);
 
    }
  
