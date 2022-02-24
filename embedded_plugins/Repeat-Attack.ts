@@ -70,7 +70,7 @@ const calcSilver = (srcPlanet: Planet, destPlanet: Planet): number => {
   if(silver > silverNeeded ) {
     silver = silverNeeded
   }
-  return silver;
+  return Math.floor(silver);
 }
 
 const getPlanetMaxRank = (planet: Planet | undefined): number => {
