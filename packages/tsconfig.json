@@ -1,0 +1,10 @@
+{
+  "extends": "@projectsophon/tsconfig",
+  "include": ["./plugins/**/*.ts", "./plugins/*.tsx"],
+  "compilerOptions": {
+    "jsx": "react",
+    "jsxFactory": "h",
+    "jsxFragmentFactory": "Fragment",
+    "types": ["preact"]
+  }
+}
