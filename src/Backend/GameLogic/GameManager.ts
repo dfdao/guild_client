@@ -848,7 +848,7 @@ class GameManager extends EventEmitter {
     const confirmationQueue = new ThrottledConcurrentQueue({
       invocationIntervalMs: 1000,
       maxInvocationsPerIntervalMs: 10,
-      maxConcurrency: 20,
+      maxConcurrency: 50,
     });
 
     for (const unconfirmedTx of unconfirmedTxs) {
