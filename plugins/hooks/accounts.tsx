@@ -1,4 +1,4 @@
-import { useCallback, useContext, useReducer } from "preact/hooks";
+import { useCallback, useContext, useEffect, useReducer, useState } from "preact/hooks";
 import { ethers } from "ethers";
 import { List } from "immutable";
 import { ComponentChildren, JSX, createContext, h } from "preact";
@@ -66,6 +66,7 @@ const MothershipAccountsContext = createContext<UseMothershipAccounts>({
 });
 
 export function MothershipAccountsProvider({ children }: { children: ComponentChildren }): JSX.Element {
+  const [loaded, setLoaded] = useState(false);
   const [state, dispatch] = useReducer(mothershipAccountsReducer, {
     signers: List<ethers.Wallet>(),
   });
@@ -75,6 +76,8 @@ export function MothershipAccountsProvider({ children }: { children: ComponentCh
       try {
         const signer = new ethers.Wallet(secret);
         dispatch({ type: "addMothershipAccount", signer });
+        const addr = signer.address;
+        localStorage.setItem(`MOTHERSHIP_ADDRESS-${addr}`, secret);
         return { signer };
       } catch (err) {
         console.error(err);
@@ -90,6 +93,34 @@ export function MothershipAccountsProvider({ children }: { children: ComponentCh
     },
     [dispatch]
   );
+
+  useEffect(() => {
+    if (!loaded) return;
+    console.log("writing addresses to storage");
+    const addresses = state.signers.toArray().map((w) => w.address);
+    localStorage.setItem("MOTHERSHIP_ADDRESSES", JSON.stringify(addresses));
+  }, [state.signers.size]);
+
+  useEffect(() => {
+    console.log("loading wallets from storage");
+    const addressesSerialized = localStorage.getItem("MOTHERSHIP_ADDRESSES");
+    const knownAddresses = [];
+    if (addressesSerialized) {
+      const addresses = JSON.parse(addressesSerialized) as string[];
+      for (let addr of addresses) {
+        knownAddresses.push(addr);
+      }
+    }
+
+    for (let addr of knownAddresses) {
+      console.log(`loading ${addr}`);
+      const secret = localStorage.getItem(`MOTHERSHIP_ADDRESS-${addr}`);
+      if (secret) {
+        addAccount(secret);
+      }
+    }
+    setLoaded(true);
+  }, []);
 
   return (
     <MothershipAccountsContext.Provider value={{ signers: state.signers.toArray(), addAccount, removeAccount }}>

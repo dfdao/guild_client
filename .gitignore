@@ -26,3 +26,4 @@ declarations
 
 # Environment variables
 .env
+.vscode
