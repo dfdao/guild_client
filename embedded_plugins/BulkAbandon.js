@@ -77,8 +77,7 @@ import {
     };
   
     getOwnedPlanetsInRange = (source) => {
-      if (!source) return;
-  
+      if (!source) return; 
       const ownedPlanetsInRange = df
         .getPlanetsInRange(source, 100)
         .filter(
@@ -86,8 +85,8 @@ import {
             planet.owner !== ZERO_ADDRESS && 
             planet.locationId !== source
         )
-        // Get closest planet
-        .sort((p1, p2) => df.getDist(p1.locationId, source) - df.getDist(p2.locationId, source));
+        // Abandon to biggest planet
+        .sort((p1, p2) => p2.planetLevel - p1.planetLevel);
       if (ownedPlanetsInRange.length === 0) return undefined;
       return ownedPlanetsInRange;
     };
