@@ -7,8 +7,20 @@ import {
   import { getPlanetName } from "https://cdn.skypack.dev/@darkforest_eth/procedural";
   const pg = { getPlanetName: getPlanetName };
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+  
+  import {
+    canStatUpgrade,
+    canPlanetUpgrade,
+    getPlanetRank,
+    //@ts-ignore
+  } from 'https://plugins.zkga.me/utils/utils.js';
+  
   class Plugin {
-    constructor() {}
+    constructor() {
+      this.maxLevel = 5;
+      this.whitelist = [];
+  
+    }
     planetLink = (locationId, clickable = true) => {
       const planet = df.getPlanetWithId(locationId);
       const planetElement = document.createElement(clickable ? "button" : "span");
@@ -24,6 +36,7 @@ import {
       planetElement.style.color = "white";
       planetElement.style.outline = "none";
       planetElement.style.padding = "0";
+      console.log()
       if (clickable) {
         planetElement.addEventListener("click", () => {
           ui.centerLocationId(locationId);
@@ -31,6 +44,31 @@ import {
       }
       return planetElement;
     };
+  
+    invaded(p) {
+      return p.invader !== ZERO_ADDRESS;
+    }
+    
+    captured(p) {
+      return p.capturer !== ZERO_ADDRESS;
+    }
+  
+    invadedAndNotCaptured(p) {
+      return this.invaded(p) && !this.captured(p);
+    }
+  
+    planetIsInsideCaptureZone(p, captureZones) {
+      if (!p.location || !p.location.coords) return false;
+      for (let zone of captureZones) {
+        let zCoords = zone.coords;
+        let zRadius = zone.radius;
+        let x = zCoords.x - p.location.coords.x;
+        let y = zCoords.y - p.location.coords.y;
+        let dist = Math.sqrt(x*x + y*y);
+        if (dist < zRadius) return true;
+      }
+      return false;
+    }
   
     removeAllChildNodes = (parent) => {
       while (parent.firstChild) {
@@ -80,12 +118,20 @@ import {
       const nearestPlanets = this.getOwnedPlanetsInRange(this.source);
     };
   
-    getNSmallestPlanets = (n) => {
+    getPlanetsToAbandon = (n) => {
+      let captureZones = df.getCaptureZones();
+      // console.log(JSON.stringify(df.getMyPlanets().map(p => p.planetLevel)))
       let sortedPlanets = df
         .getMyPlanets()
-        .filter(planet => planet.locationId !== df.getHomeHash())
-        .sort((a, b) => a.planetLevel < b.planetLevel);
-      console.log(`planets: ${sortedPlanets}`);
+        .filter(planet => 
+          planet.locationId !== df.getHomeHash() &&
+          !this.planetIsInsideCaptureZone(planet, captureZones) &&
+          !this.invadedAndNotCaptured(planet) &&
+          planet.planetLevel <= this.maxLevel &&
+          getPlanetRank(planet) == 0
+        )
+        .sort((a, b) => a.planetLevel - b.planetLevel);
+      console.log(sortedPlanets.map(p => p.planetLevel))
       if (sortedPlanets.length < n) return sortedPlanets;
       return sortedPlanets.slice(0, n);
     };
@@ -117,9 +163,25 @@ import {
           this.source = [sourcePlanet.locationId];
   
           this.source.forEach((planet) => {
+            if(!planet) {
+              sourcePlanetContainer.append("?????")
+            };
+            const linkContainer = document.createElement("div")
+            const planetLink = this.planetLink(planet);
+            const removeButton = document.createElement("button");
+            removeButton.innerText = `X`;
+            removeButton.style.float = 'right';
+            removeButton.addEventListener("click", (evt) => {
+              this.source.filter(p => p !== planet);
+              sourcePlanetContainer.removeChild(linkContainer);
+            });
+            linkContainer.appendChild(this.planetLink(planet));
+            linkContainer.appendChild(removeButton)
+            console.log(linkContainer)
             sourcePlanetContainer.append(
-              planet ? this.planetLink(planet) : "?????"
+              linkContainer
             );
+  
           });
         }
       });
@@ -148,20 +210,57 @@ import {
         this.removeAllChildNodes(sourcePlanetContainer);
         sourcePlanetContainer.append("Planets to abandon:")
   
-        const planets = this.getNSmallestPlanets(numPlanets);
+        const planets = this.getPlanetsToAbandon(numPlanets);
         console.log(planets)
-        for (let source of planets) {
-          if (source.owner !== df.getAccount()) {
-              console.log(`owner: ${source.owner}, account: ${df.getAccount()}`)
-            alert("You must own the planet");
-            return;
-          }
-          this.source.push(source.locationId);
+        for (let planet of planets) {
+          if(!planet) {
+            sourcePlanetContainer.append("?????")
+          };
+          const linkContainer = document.createElement("div")
+          linkContainer.style.marginBottom = `4px`;
+  
+          const planetLink = this.planetLink(planet.locationId);
+          const removeButton = document.createElement("button");
+          removeButton.innerText = `X`;
+          removeButton.style.float = 'right';
+          removeButton.addEventListener("click", (evt) => {
+  
+            this.source = this.source.filter(p => {
+              console.log(`p: ${p}\n planet.locationId: ${planet.locationId}`)
+              return p != planet.locationId
+            });
+            sourcePlanetContainer.removeChild(linkContainer);
+            console.log(`length: ${this.source.length}`)
+          });
+  
+          linkContainer.appendChild(planetLink);
+          linkContainer.appendChild(removeButton)
+          console.log(linkContainer)
           sourcePlanetContainer.append(
-            source ? this.planetLink(source.locationId) : "?????"
+            linkContainer
           );
+          this.source.push(planet.locationId)
+  
         }
       });
+  
+      let stepperLabel = document.createElement('label');
+      stepperLabel.innerText = 'Max level';
+      stepperLabel.style.display = 'block';
+  
+      let maxLevelRange = createRange(this.maxLevel);
+      let maxLevelLabel = document.createElement('span');
+      maxLevelLabel.innerText = `${maxLevelRange.value}`;
+      maxLevelLabel.style.float = 'right';
+      maxLevelRange.onchange = (evt) => {
+          maxLevelLabel.innerText = `${evt.target.value}`;
+          try {
+              this.maxLevel = parseInt(evt.target.value, 10);
+          } catch (e) {
+              console.error('could not parse level', e);
+          }
+      }
+  
       let inputWrapper = document.createElement("div");
       inputWrapper.style.marginBottom = "10px";
   
@@ -182,6 +281,11 @@ import {
       container.appendChild(addPlanetSourceButton);
       container.appendChild(document.createElement("hr"));
       container.appendChild(inputWrapper);
+  
+      container.appendChild(stepperLabel);
+      container.appendChild(maxLevelRange);
+      container.appendChild(maxLevelLabel);
+  
       container.appendChild(document.createElement("br"));
       container.appendChild(sourcePlanetContainer);
       container.appendChild(myButton);
@@ -191,3 +295,15 @@ import {
   }
   
   export default Plugin;
+  
+  function createRange(value) {
+    let range = document.createElement('input');
+    range.type = 'range';
+    range.min = '0';
+    range.max = '8';
+    range.step = '1';
+    range.value = value;
+    range.style.width = '80%';
+    range.style.height = '24px';
+    return range;
+  }
