@@ -5,10 +5,12 @@ import {
   PlanetLevelNames,
 } from "https://cdn.skypack.dev/@darkforest_eth/types";
 import { getPlanetName } from "https://cdn.skypack.dev/@darkforest_eth/procedural";
-const pg = { getPlanetName: getPlanetName };
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
-const OFF_LIMITS = ['0000ff381808f9e5549b0a06fb40b83b46b2988603241ca756eede057c6b3d8b']
+const OFF_LIMITS = [
+  '0000ff381808f9e5549b0a06fb40b83b46b2988603241ca756eede057c6b3d8b',
+  '000026100002a129b93550ffd73470da9ae9b8db6bd18d5d3a49b53a5d45a01e'
+]
 
 import {
   canStatUpgrade,
@@ -29,12 +31,13 @@ class Plugin {
 
   planetLink = (locationId, clickable = true) => {
     const planet = df.getPlanetWithId(locationId);
+    if(!planet) return;
     const planetElement = document.createElement(clickable ? "button" : "span");
     planetElement.innerText = `L${
       planet.planetLevel
     }J${df.getDefaultSpaceJunkForPlanetLevel(
       planet.planetLevel
-    )} ${pg.getPlanetName(planet)}`;
+    )} ${getPlanetName(planet)}`;
 
     planetElement.title = locationId;
     planetElement.style.textDecoration = "underline";
@@ -43,7 +46,6 @@ class Plugin {
     planetElement.style.color = "white";
     planetElement.style.outline = "none";
     planetElement.style.padding = "0";
-    console.log();
     if (clickable) {
       planetElement.addEventListener("click", () => {
         ui.centerLocationId(locationId);
@@ -90,14 +92,13 @@ class Plugin {
       .getPlanetsInRange(source, 100)
       .filter(
         (planet) =>
-          planet.owner != ZERO_ADDRESS && 
+          planet.owner != ZERO_ADDRESS &&
           planet.locationId != source &&
           !OFF_LIMITS.includes(planet.locationId)
       )
       .sort(
         (a, b) => b.planetLevel - a.planetLevel
       );
-      console.log(ownedPlanetsInRange)
     if (ownedPlanetsInRange.length === 0) return undefined;
     return ownedPlanetsInRange;
   };
@@ -109,22 +110,25 @@ class Plugin {
 
   abandon = (evt) => {
     let sources = this.source;
+    console.log('sources for abandon', sources);
     if (!sources) return;
     const acct = df.getAccount();
+    if(!acct) return;
     sources.forEach((source) => {
-      if (df.getPlayerSpaceJunk(acct) < 1500) return;
+      const src = df.getPlanetWithId(source);
+      if(!src) return;
+      if (df.getPlayerSpaceJunk(acct) < 1000) return;
       const target = this.getNearestOwnedPlanetInRange(source);
-      console.log(`abandoning ${source} to ${target}`);
       if (!target) return;
-      console.log(`source: ${source}, target: ${target}`);
-      df.move(source, target.locationId, source.energy, 0, false, true);
+      console.log(`source: ${getPlanetName(src)}, target: ${getPlanetName(target)}`);
+      df.move(src.locationId, target.locationId, src.energy, 0, false, true);
     });
     this.removeAllChildNodes(this.sourcePlanetContainer);
   };
 
   updatePlanets(numPlanets) {
-    if (numPlanets == NaN) {
-      alert("input a number");
+    if (!numPlanets) {
+      alecort("input a number");
       return;
     }
     this.source = [];
@@ -133,10 +137,11 @@ class Plugin {
 
     const planets = this.getPlanetsToAbandon(numPlanets);
     let junk = 0;
-    console.log(planets);
+    // console.log(planets);
     for (let planet of planets) {
       if (!planet) {
         this.sourcePlanetContainer.append("?????");
+        continue;
       }
       const linkContainer = document.createElement("div");
       linkContainer.style.marginBottom = `4px`;
@@ -149,7 +154,7 @@ class Plugin {
         this.source = this.source.filter(
           (p) =>
             p != planet.locationId &&
-            planet.locationId !== df.getHomeHash() &&
+            planet.locationId != df.getHomeHash() &&
             df.getPlanetsInRange(p).length != 0
         );
         this.sourcePlanetContainer.removeChild(linkContainer);
@@ -158,7 +163,6 @@ class Plugin {
 
       linkContainer.appendChild(planetLink);
       linkContainer.appendChild(removeButton);
-      console.log(linkContainer);
       this.sourcePlanetContainer.append(linkContainer);
       this.source.push(planet.locationId);
       junk += df.getDefaultSpaceJunkForPlanetLevel(planet.planetLevel);
@@ -166,11 +170,10 @@ class Plugin {
     this.junkLostLabel.innerText = `Remove ${junk} Junk`;
   }
 
-  handleMultiplePlanets = (evt) => {
-    const nearestPlanets = this.getOwnedPlanetsInRange(this.source);
-  };
   clearSendTimer() {
+    console.log("check clear timer")
     if (this.sendTimer) {
+      console.log("clearing interval")
       clearInterval(this.sendTimer);
     }
   }
@@ -226,6 +229,7 @@ class Plugin {
         this.source.forEach((planet) => {
           if (!planet) {
             this.sourcePlanetContainer.append("?????");
+            return;
           }
           const linkContainer = document.createElement("div");
           const planetLink = this.planetLink(planet);
@@ -238,7 +242,7 @@ class Plugin {
           });
           linkContainer.appendChild(this.planetLink(planet));
           linkContainer.appendChild(removeButton);
-          console.log(linkContainer);
+          // console.log(linkContainer);
           this.sourcePlanetContainer.append(linkContainer);
         });
       }
@@ -253,11 +257,11 @@ class Plugin {
     autoSendCheck.checked = false;
     autoSendCheck.onchange = (evt) => {
       if (evt.target.checked) {
-        console.log(`here1`);
+        console.log(`Starting abandon...`);
         this.updatePlanets(10);
         this.abandon();
         this.sendTimer = setInterval(() => {
-          console.log(`here2`);
+          console.log(`console log in interval...`);
           this.updatePlanets(5);
           this.abandon();
         }, 1000 * this.timeLevel);
