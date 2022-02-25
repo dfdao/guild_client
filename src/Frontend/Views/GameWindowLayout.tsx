@@ -138,7 +138,7 @@ export function GameWindowLayout({
           visible={transactionLogVisible}
           onClose={() => setTransactionLogVisible(false)}
         />
-        <PlanetDexPane visible={planetdexVisible} onClose={() => setPlanetdexVisible(false)} />
+        {/* <PlanetDexPane visible={planetdexVisible} onClose={() => setPlanetdexVisible(false)} /> */}
         <TwitterVerifyPane
           visible={twitterVerifyVisible}
           onClose={() => setTwitterVerifyVisible(false)}
