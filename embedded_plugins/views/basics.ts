@@ -1,16 +1,15 @@
 export const Stepper = (
+  options: {min: string, max: string, step: string, value: string },
   onChange: ((this: GlobalEventHandlers, ev: Event) => any) | null,
-  min = "0",
-  max = "9"
 ) => {
   let stepperLabel = document.createElement("label");
   stepperLabel.style.display = "block";
   let stepper = document.createElement("input");
   stepper.type = "range";
-  stepper.min = min;
-  stepper.max = max;
-  stepper.step = "1";
-  stepper.value = "2";
+  stepper.min = options.min;
+  stepper.max = options.max;
+  stepper.step = options.step;
+  stepper.value = options.value;
   stepper.style.width = "50%";
   stepper.style.height = "24px";
   let stepperValue = document.createElement("span");

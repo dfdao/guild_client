@@ -14,15 +14,20 @@ import { getPlanetName } from "http://cdn.skypack.dev/@darkforest_eth/procedural
 import { Button, Text, LineBreak, Stepper, Select } from "./views/basics";
 import { QueuedArrival } from "@darkforest_eth/types";
 
+// Variables to tweak:
+// 1. attackLimit
+// 2. Attack invaded planets
+// 3. Attack owned planets
+
 function getArrivalsForPlanet(planetId: LocationId) {
     return df.getAllVoyages().filter(arrival => arrival.toPlanet === planetId).filter(p => p.arrivalTime > Date.now() / 1000);
   }
 
-function getInvaderArrivals(target: Planet) {
+function getInvaderArrivals(target: Planet, invader: Planet) {
     const arrivalsForPlanet = getArrivalsForPlanet(target.locationId);
     var invaderArrivals:QueuedArrival[]  = [];
     if(arrivalsForPlanet) {
-        invaderArrivals = arrivalsForPlanet.filter(a => df.getPlanetWithId(a.fromPlanet)?.owner === target.owner);
+        invaderArrivals = arrivalsForPlanet.filter(a => df.getPlanetWithId(a.fromPlanet)?.owner === invader.owner);
     }
     console.log(`Does ${getPlanetName(target)} have invader arrivals?`, invaderArrivals)
     return invaderArrivals
@@ -141,7 +146,7 @@ function getCaptureZoneTargets(
         p.planetLevel >= minCaptureLevel &&
         !planetWasAlreadyCaptured(p) &&
         df.getTimeForMove(invader.locationId,p.locationId) < maxtime &&
-        getInvaderArrivals(p).length === 0 && // dont send to planets that have already have arrrivals from invader
+        getInvaderArrivals(p,invader).length === 0 && // dont send to planets that have already have arrrivals from invader
         (attack || p.owner === PIRATES)  && 
         (attackInvaded || !planetWasAlreadyInvaded(p))
     )
@@ -253,6 +258,10 @@ class CrawlCapture implements DFPlugin {
     captureZoneText: HTMLParagraphElement;
     dryRun: HTMLButtonElement;
     dryText: HTMLParagraphElement;
+    attackButton: HTMLButtonElement;
+    attackText: any;
+    attackInvadedButton: HTMLButtonElement;
+    attackInvadedText: HTMLParagraphElement;
 
 
     constructor() {
@@ -339,6 +348,20 @@ class CrawlCapture implements DFPlugin {
 
     this.captureZoneText = Text(`Capture Zone: `);
 
+    this.attackText = Text(`Attack owned?: ${this.attack.toString()}`);
+
+    this.attackButton = Button('Attack owned planets?', () => {
+        this.attack = !this.attack
+        this.attackText.innerHTML = `Attack owned?: ${this.attack.toString()}`;
+    })
+
+    this.attackInvadedButton = Button('Attack Already Invaded?', () => {
+        this.attackInvaded = !this.attackInvaded
+        this.attackInvadedText.innerHTML = `Attack Invaded: ${this.attackInvaded.toString()}`;
+    })
+
+    this.attackInvadedText = Text(`Attack Invaded: ${this.dry.toString()}`);
+
     this.dryRun = Button('Dry Run?', () => {
         this.dry = !this.dry
         this.dryText.innerHTML = `Dry Run: ${this.dry.toString()}`;
@@ -351,16 +374,22 @@ class CrawlCapture implements DFPlugin {
     container.append(LineBreak());
     container.append(this.updatePlanet);
     container.append(this.destinationPlanetName);
-    container.append(LineBreak());
+    // container.append(LineBreak());
     container.append(this.setCaptureZone);
     container.append(this.planetInCaptureZoneName);
     container.append(this.captureZoneText);
-    container.append(LineBreak());
-    container.append(this.startCrawl);
-    container.append(this.crawlStatus);
-    container.append(LineBreak());
+    // container.append(LineBreak());    
+    container.append(this.attackButton);
+    container.append(this.attackText);
+    // container.append(LineBreak());
+    container.append(this.attackInvadedButton);
+    container.append(this.attackInvadedText);
+    // container.append(LineBreak());
     container.append(this.dryRun);
     container.append(this.dryText);
+    container.append(this.startCrawl);
+    container.append(this.crawlStatus);
+    // container.append(LineBreak());
 
    }
  
