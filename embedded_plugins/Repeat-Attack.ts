@@ -186,7 +186,6 @@ const ExecuteAttack = (
     return;
   }
 
-
   const arrivals = getArrivalsForPlanet(targetPlanet.locationId);
 
   if(srcHasJunk && srcNeedsJunk) {
@@ -230,9 +229,13 @@ const ExecuteAttack = (
     
   }
 
-  if(srcPlanet.planetLevel === 0) {
-    console.log(`sending L0`)
+  if(srcPlanet.planetLevel === 1 || srcPlanet.planetLevel === 0) {
+    console.log(`sending L1 or L0`)
     moveIsTakeJunk = true;
+  }
+
+  if(arrivals.length > 5) {
+    return;
   }
 
   // Needs updated check getUnconfirmedDepartingForces
@@ -243,7 +246,6 @@ const ExecuteAttack = (
   const FUZZY_ENERGY = Math.floor(srcPlanet.energy - departingForces); //Best estimate of how much energy is ready to send
   if(moveIsTakeJunk) {
     // If < 6 arrivals, attack
-    if(arrivals.length <= 5) {
     const FORCES = targetPlanet
     const silver = calcSilver(srcPlanet, targetPlanet);
     console.log(`sending silver`, silver);
@@ -255,8 +257,7 @@ const ExecuteAttack = (
 
     df.move(srcId, targetId, energyNeeded, silver, undefined, abandoning);
     return;
-    }
-    return;
+  
   }
   if (FUZZY_ENERGY > TRIGGER_AMOUNT) {
     const overflow_send =
