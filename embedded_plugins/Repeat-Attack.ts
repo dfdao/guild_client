@@ -238,6 +238,8 @@ const ExecuteAttack = (
     return;
   }
 
+
+  console.log(`Repeat Attack from ${getPlanetName(srcPlanet)} to ${getPlanetName(targetPlanet)}`)
   // Needs updated check getUnconfirmedDepartingForces
   const departingForces = unconfirmedDepartures(srcPlanet);
   const TRIGGER_AMOUNT = Math.floor(
