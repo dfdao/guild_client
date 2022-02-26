@@ -11,7 +11,7 @@ import {
 } from "http://cdn.skypack.dev/@darkforest_eth/types";
 // @ts-ignore
 import { getPlanetName } from "http://cdn.skypack.dev/@darkforest_eth/procedural";
-import { Button, Text, LineBreak, Stepper, Select } from "./views/basics";
+import { Button, Text, LineBreak, Stepper, Select } from "../embedded_plugins/views/basics";
 import { QueuedArrival } from "@darkforest_eth/types";
 
 // Variables to tweak:

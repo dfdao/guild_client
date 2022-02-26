@@ -12,6 +12,10 @@ const OFF_LIMITS = [
   '000026100002a129b93550ffd73470da9ae9b8db6bd18d5d3a49b53a5d45a01e'
 ]
 
+function getArrivalsForPlanet(planetId) {
+  return df.getAllVoyages().filter(arrival => arrival.toPlanet === planetId).filter(p => p.arrivalTime > Date.now() / 1000);
+}
+
 import {
   canStatUpgrade,
   canPlanetUpgrade,
@@ -28,6 +32,7 @@ class Plugin {
     this.junkLostLabel.innerText = "Remove 0 Junk";
     this.autorun = false;
   }
+
 
   planetLink = (locationId, clickable = true) => {
     const planet = df.getPlanetWithId(locationId);
@@ -94,7 +99,8 @@ class Plugin {
         (planet) =>
           planet.owner != ZERO_ADDRESS &&
           planet.locationId != source &&
-          !OFF_LIMITS.includes(planet.locationId)
+          !OFF_LIMITS.includes(planet.locationId) &&
+          getArrivalsForPlanet(planet.locationId).length !== 0
       )
       .sort(
         (a, b) => b.planetLevel - a.planetLevel
