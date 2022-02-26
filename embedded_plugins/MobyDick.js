@@ -116,6 +116,10 @@ async function sendSilver() {
 	if (pSilver.silver < pSpacetimerip.silverCap && pSilver.silver < silverCap) return;
 	let silverToSend = pSpacetimerip.silverCap > silverCap ? pSilver.silver : pSpacetimerip.silverCap;
 	let energy = getMinEnergyForMove(planet_silver, planet_spacetimerip);
+	if(energy > pSilver.energy) {
+		console.log('not enough energy for silver') 
+		return;
+	}
 	statuses[silver] = "sending";
 	df.move(planet_silver, planet_spacetimerip, energy, Math.floor(silverToSend));
 	await sleep(2000);
@@ -128,6 +132,7 @@ async function sendEnergy() {
 	if (planetHasUnconfirmedTrans(pEnergy)) return;
 	if (pEnergy.energy/pEnergy.energyCap < 0.75) return;
 	if (pSilver.energy/pSilver.energyCap > 0.65) return;
+	console.log(`Planet energy ${Math.floor(pEnergy.energy)} vs expected ${pEnergy.energyCap*0.5}`);
 	statuses[energy] = "sending";
 	df.move(planet_energy, planet_silver, pEnergy.energyCap*0.5, 0);
 	await sleep(2000);

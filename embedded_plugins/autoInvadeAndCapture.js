@@ -8,6 +8,19 @@ let loopIsBusy = false;
 
 const emptyAddress = "0x0000000000000000000000000000000000000000";
 
+const CAPTURE_ZONE_POINTS = [
+    0,
+    0,
+    250000,
+    500000,
+    750000,
+    1000000,
+    10000000,
+    20000000,
+    50000000,
+    100000000
+]
+
 const blockCaptureWaitCount = 2050; // how many blocks we have to wait after invasion before we can capture it
 
 let planetsWaitingForBlocks = [];
@@ -31,6 +44,14 @@ const minInvadePlanetLvl = 2;
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const calcScore = (planets) => {
+	var sum = 0;
+	for (const p of planets) {
+		sum += CAPTURE_ZONE_PLANET_LEVEL_SCORE[p.planetLevel];
+	}
+	return `${(sum/1000000).toFixed(2)}m`;
 }
 
 function planetWasAlreadyInvaded(p) {
@@ -118,12 +139,12 @@ async function loop() {
 	divStatus.innerHTML = "";
 	divStatus.innerHTML += "waitingForBlocks: "+planetsWaitingForBlocks.length;
 	divStatus.innerHTML += "&nbsp;&nbsp;&nbsp;  waitingForEnergy: "+planetsWaitingForEnergy.length+"<br>";
-	divStatus.innerHTML += "invaded: "+planetsInvaded.length;
-	divStatus.innerHTML += "&nbsp;&nbsp;&nbsp;  captured: "+planetsCaptured.length;
+	divStatus.innerHTML += "invaded: "+planetsInvaded.length+` (${calcScore(planetsInvaded)})`;
+	divStatus.innerHTML += "&nbsp;&nbsp;&nbsp;  captured: "+planetsCaptured.length+` (${calcScore(planetsCaptured)})`;;
 	
 	divPlanetListBlocks.innerHTML = "";
 	if (planetsWaitingForBlocks.length > 0) {
-		divPlanetListBlocks.innerHTML = "waiting for blocks:<br>";
+		divPlanetListBlocks.innerHTML = "waiting for blocks:<br>" + ` (${calcScore(planetsWaitingForBlocks)})\n`;
 		for (let p of planetsWaitingForBlocks) {
 			divPlanetListBlocks.innerHTML += planetBut(p)+" ";
 		}
@@ -131,7 +152,7 @@ async function loop() {
 	
 	divPlanetListEnergy.innerHTML = "";
 	if (planetsWaitingForEnergy.length > 0) {
-		divPlanetListEnergy.innerHTML = "waiting for 82% energy:<br>";
+		divPlanetListEnergy.innerHTML = "waiting for 82% energy:<br>" + ` (${calcScore(planetsWaitingForEnergy)})\n`;
 		for (let p of planetsWaitingForEnergy) {
 			divPlanetListEnergy.innerHTML += planetBut(p)+" ";
 		}

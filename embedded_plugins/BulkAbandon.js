@@ -13,7 +13,7 @@ const OFF_LIMITS = [
 ]
 
 function getArrivalsForPlanet(planetId) {
-  return df.getAllVoyages().filter(arrival => arrival.toPlanet === planetId).filter(p => p.arrivalTime > Date.now() / 1000);
+  return df.getAllVoyages().filter(arrival => arrival.toPlanet == planetId).filter(p => p.arrivalTime > Date.now() / 1000);
 }
 
 import {
@@ -100,12 +100,12 @@ class Plugin {
           planet.owner != ZERO_ADDRESS &&
           planet.locationId != source &&
           !OFF_LIMITS.includes(planet.locationId) &&
-          getArrivalsForPlanet(planet.locationId).length !== 0
+          getArrivalsForPlanet(planet.locationId).length == 0
       )
       .sort(
         (a, b) => b.planetLevel - a.planetLevel
       );
-    if (ownedPlanetsInRange.length === 0) return undefined;
+    // if (ownedPlanetsInRange.length === 0) return undefined;
     return ownedPlanetsInRange;
   };
 
@@ -125,8 +125,15 @@ class Plugin {
       if(!src) return;
       if (df.getPlayerSpaceJunk(acct) < 1000) return;
       const target = this.getNearestOwnedPlanetInRange(source);
-      if (!target) return;
-      console.log(`source: ${getPlanetName(src)}, target: ${getPlanetName(target)}`);
+      if (!target) {
+        console.log('target not found')
+        return
+      };
+      if (getArrivalsForPlanet(target.locationId).length != 0) {
+        console.log(`target has arrivals`);
+        return;
+      }
+      console.log(`abandon source: ${getPlanetName(src)}, target: ${getPlanetName(target)}`);
       df.move(src.locationId, target.locationId, src.energy, 0, false, true);
     });
     this.removeAllChildNodes(this.sourcePlanetContainer);
@@ -134,7 +141,7 @@ class Plugin {
 
   updatePlanets(numPlanets) {
     if (!numPlanets) {
-      alecort("input a number");
+      alert("input a number");
       return;
     }
     this.source = [];
@@ -194,7 +201,10 @@ class Plugin {
           !this.planetIsInsideCaptureZone(planet, captureZones) &&
           !this.invadedAndNotCaptured(planet) &&
           planet.planetLevel <= this.maxLevel &&
-          getPlanetRank(planet) == 0
+          getPlanetRank(planet) == 0 &&
+          df.entityStore.getArrivalIdsForLocation(planet.locationId) &&
+          df.entityStore.getArrivalIdsForLocation(planet.locationId).length == 0 &&
+          this.getNearestOwnedPlanetInRange(planet.locationId)
       )
       .sort((a, b) => a.planetLevel - b.planetLevel);
     // console.log(sortedPlanets.map((p) => p.planetLevel));
