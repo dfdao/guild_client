@@ -371,7 +371,9 @@ class Plugin {
     container.appendChild(autoSendCheck);
   }
 
-  destroy() {}
+  destroy() {
+    clearInterval(this.sendTimer);
+  }
 }
 
 export default Plugin;
