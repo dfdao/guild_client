@@ -53,6 +53,7 @@ import {
   ContractsAPIEvent,
   PlanetTypeWeightsBySpaceType,
 } from '../../_types/darkforest/api/ContractsAPITypes';
+import { Account } from '../Network/AccountManager';
 import { loadDiamondContract } from '../Network/Blockchain';
 import { eventLogger, EventType } from '../Network/EventLogger';
 
@@ -94,8 +95,37 @@ export class ContractsAPI extends EventEmitter {
    */
   private contractAddress: EthAddress;
 
+  public selectedAccount: EthAddress;
+
+  public ethConnectionsMap: Map<EthAddress, EthConnection>
+
+  public async setEthConnections(accounts: Account[]) {
+    console.log(`setingEthConnections`);
+      this.ethConnectionsMap = new Map();
+      for(const account of accounts) {
+        const ethC = await new EthConnection(
+          this.ethConnection.getProvider(), 
+          this.ethConnection.getCurrentBlockNumber()
+        );
+        await ethC.setAccount(account.privateKey);
+        await ethC.loadContract(this.contractAddress, loadDiamondContract);
+        this.ethConnectionsMap.set(account.address, ethC)
+        console.log(account.address, ethC.getAddress());
+        console.log('contract', ethC.getContract<DarkForest>(this.contractAddress));
+      }
+  }
+
   get contract() {
     return this.ethConnection.getContract<DarkForest>(this.contractAddress);
+  }
+
+  getContractFor(address: EthAddress | undefined) {
+    if(!address) throw new Error("Sad boo");
+    const ethConnection = this.ethConnectionsMap.get(address);
+    if(!ethConnection) throw new Error("no Eth Connection"); 
+
+    console.log()
+    return ethConnection.getContract<DarkForest>(this.contractAddress);
   }
 
   public constructor({ connection, contractAddress }: ContractsApiConfig) {

@@ -126,6 +126,7 @@ import {
   TowardsCenterPattern,
   TowardsCenterPatternV2,
 } from '../Miner/MiningPatterns';
+import { Account, getAccounts } from '../Network/AccountManager';
 import { eventLogger, EventType } from '../Network/EventLogger';
 import { loadLeaderboard } from '../Network/LeaderboardApi';
 import { addMessage, deleteMessages, getMessagesOnPlanets } from '../Network/MessageAPI';
@@ -173,7 +174,7 @@ class GameManager extends EventEmitter {
    * represented by `undefined` in the case when you want to simply load the game state from the
    * contract and view it without be able to make any moves.
    */
-  private readonly account: EthAddress | undefined;
+  private account: EthAddress | undefined;
 
   /**
    * Map from ethereum addresses to player objects. This isn't stored in {@link GameObjects},
@@ -198,7 +199,7 @@ class GameManager extends EventEmitter {
    *   {@link ContractCaller} and transactions (writes to the blockchain on behalf of the player),
    *   implemented by {@link TxExecutor} via two separately tuned {@link ThrottledConcurrentQueue}s.
    */
-  private readonly contractsAPI: ContractsAPI;
+  private contractsAPI: ContractsAPI;
 
   /**
    * An object that syncs any newly added or deleted chunks to the player's IndexedDB.
@@ -242,7 +243,7 @@ class GameManager extends EventEmitter {
    * allows us to do basic operations such as wait for a transaction to complete, check the player's
    * address and balance, etc.
    */
-  private readonly ethConnection: EthConnection;
+  private ethConnection: EthConnection;
 
   /**
    * Each round we change the hash configuration of the game. The hash configuration is download
@@ -345,8 +346,25 @@ class GameManager extends EventEmitter {
    */
   private safeMode: boolean;
 
+  private accounts: Account[];
+
+  private ethConnections: EthConnection[];
+
+  private contractAPIs: ContractsAPI[];
+
+  private accountContractAPI: ContractsAPI; 
+
   public get planetRarity(): number {
     return this.contractConstants.PLANET_RARITY;
+  }
+
+  public ownsAccount(address: EthAddress): boolean {
+    const accounts = (this.accounts).map(a => a.address);
+    return accounts.includes(address);
+  }
+
+  public async setAccounts() {
+    this.accounts = await getAccounts();
   }
 
   /**
@@ -376,7 +394,6 @@ class GameManager extends EventEmitter {
     paused: boolean
   ) {
     super();
-
     this.diagnostics = {
       rpcUrl: 'unknown',
       totalPlanets: 0,
@@ -585,6 +602,9 @@ class GameManager extends EventEmitter {
 
     const gameStateDownloader = new InitialGameStateDownloader(terminal.current);
     const contractsAPI = await makeContractsAPI({ connection, contractAddress });
+    await contractsAPI.setEthConnections(await getAccounts());
+
+    
 
     terminal.current?.println('Loading game data from disk...');
 
@@ -694,6 +714,8 @@ class GameManager extends EventEmitter {
     gameManager.refreshTwitters();
 
     gameManager.listenForNewBlock();
+
+    await gameManager.setAccounts();
 
     // set up listeners: whenever ContractsAPI reports some game state update, do some logic
     gameManager.contractsAPI
@@ -2711,7 +2733,6 @@ class GameManager extends EventEmitter {
   ): Promise<Transaction<UnconfirmedMove>> {
     localStorage.setItem(`${this.getAccount()?.toLowerCase()}-fromPlanet`, from);
     localStorage.setItem(`${this.getAccount()?.toLowerCase()}-toPlanet`, to);
-
     try {
       if (!bypassChecks && this.checkGameHasEnded()) {
         throw new Error('game has ended');
@@ -2752,7 +2773,7 @@ class GameManager extends EventEmitter {
       const oldPlanet = this.entityStore.getPlanetWithLocation(oldLocation);
 
       if (
-        ((!bypassChecks && !this.account) || !oldPlanet || oldPlanet.owner !== this.account) &&
+        ((!bypassChecks && !this.account) || !oldPlanet || !this.ownsAccount(oldPlanet.owner)) &&
         !isSpaceShip(this.getArtifactWithId(artifactMoved)?.artifactType)
       ) {
         throw new Error('attempted to move from a planet not owned by player');
@@ -2795,9 +2816,17 @@ class GameManager extends EventEmitter {
         return args;
       };
 
+      var player = oldPlanet?.owner;
+
+      // Handle spaceship logic
+      const artifact = this.entityStore.getArtifactById(artifactMoved);
+      if (isSpaceShip(artifact?.artifactType)){
+        player = artifact?.currentOwner
+      }
+      
       const txIntent: UnconfirmedMove = {
         methodName: ContractMethodName.MOVE,
-        contract: this.contractsAPI.contract,
+        contract: this.contractsAPI.getContractFor(player),
         args: getArgs(),
         from: oldLocation.hash,
         to: newLocation.hash,
@@ -2806,10 +2835,12 @@ class GameManager extends EventEmitter {
         artifact: artifactMoved,
         abandoning,
       };
-
+      
       if (artifactMoved) {
         const artifact = this.entityStore.getArtifactById(artifactMoved);
-
+        if (isSpaceShip(artifact?.artifactType)){
+          player = artifact?.currentOwner
+        }
         if (!bypassChecks) {
           if (!artifact) {
             throw new Error("couldn't find this artifact");
@@ -2825,7 +2856,9 @@ class GameManager extends EventEmitter {
 
       // Always await the submitTransaction so we can catch rejections
       const tx = await this.contractsAPI.submitTransaction(txIntent);
-
+      
+      /// Get original txApi
+      this.contractsAPI = this.accountContractAPI;
       return tx;
     } catch (e) {
       this.getNotificationsManager().txInitError(ContractMethodName.MOVE, e.message);
@@ -2848,9 +2881,11 @@ class GameManager extends EventEmitter {
       localStorage.setItem(`${this.getAccount()?.toLowerCase()}-upPlanet`, planetId);
       localStorage.setItem(`${this.getAccount()?.toLowerCase()}-branch`, branch.toString());
 
+      const player = this.getPlanetWithId(planetId)?.owner
+
       const txIntent: UnconfirmedUpgrade = {
         methodName: ContractMethodName.UPGRADE,
-        contract: this.contractsAPI.contract,
+        contract: this.contractsAPI.getContractFor(player),
         args: Promise.resolve([locationIdToDecStr(planetId), branch.toString()]),
         locationId: planetId,
         upgradeBranch: branch,

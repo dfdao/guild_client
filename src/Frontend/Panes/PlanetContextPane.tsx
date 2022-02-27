@@ -39,7 +39,7 @@ function PlanetContextPaneContent({
 }) {
   const account = useAccount(uiManager);
   const notifs = useMemo(() => getNotifsForPlanet(planet.value, account), [planet, account]);
-  const owned = planet.value?.owner === account;
+  const owned = planet.value?.owner ? uiManager.getGameManager().ownsAccount(planet.value?.owner) : false;
 
   useEffect(() => {
     if (!planet.value) modal.popAll();
